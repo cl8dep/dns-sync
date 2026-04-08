@@ -11,6 +11,8 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
       contents: write   # needed to create GitHub releases
+    env:
+      HOMEBREW_TAP_TOKEN: ${{ secrets.HOMEBREW_TAP_TOKEN }}
 
     steps:
       - uses: actions/checkout@v4
@@ -48,9 +50,8 @@ jobs:
         # Requires a PAT with repo scope stored as secret HOMEBREW_TAP_TOKEN
         # Create at: https://github.com/settings/tokens/new?scopes=repo
         # Add at:    https://github.com/cl8dep/dns-sync/settings/secrets/actions
-        if: ${{ secrets.HOMEBREW_TAP_TOKEN != '' }}
+        if: ${{ env.HOMEBREW_TAP_TOKEN != '' }}
         env:
-          HOMEBREW_TAP_TOKEN: ${{ secrets.HOMEBREW_TAP_TOKEN }}
           VERSION: ${{ github.ref_name }}
         run: |
           export VERSION_NUM="${VERSION#v}"
