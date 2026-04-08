@@ -1,115 +1,93 @@
 name: Release
 
+# Triggered by pushing a version tag: git tag v0.3.0 && git push origin v0.3.0
 on:
   push:
     tags:
-      - "v*.*.*"
-
-permissions:
-  contents: write
-  packages: write
+      - 'v[0-9]*'
 
 jobs:
-  build:
-    name: Build ${{ matrix.rid }}
-    runs-on: ${{ matrix.os }}
-    strategy:
-      matrix:
-        include:
-          - rid: linux-x64
-            os: ubuntu-latest
-            output: dns-sync-linux-x64
-          - rid: linux-arm64
-            os: ubuntu-latest
-            output: dns-sync-linux-arm64
-          - rid: darwin-x64
-            os: macos-latest
-            output: dns-sync-darwin-x64
-          - rid: darwin-arm64
-            os: macos-latest
-            output: dns-sync-darwin-arm64
-          - rid: win-x64
-            os: windows-latest
-            output: dns-sync-win-x64.exe
-
-    steps:
-      - uses: actions/checkout@v4
-
-      - name: Setup .NET
-        uses: actions/setup-dotnet@v4
-        with:
-          dotnet-version: "10.0.x"
-
-      - name: Publish
-        run: |
-          dotnet publish src/DnsSync \
-            -c Release \
-            -r ${{ matrix.rid }} \
-            --self-contained true \
-            -p:PublishSingleFile=true \
-            -p:DebugType=none \
-            -p:DebugSymbols=false \
-            -o publish/${{ matrix.rid }}
-
-      - name: Rename binary
-        shell: bash
-        run: |
-          find publish/${{ matrix.rid }} -type f \( -name "dns-sync" -o -name "dns-sync.exe" \) \
-            -exec cp {} publish/${{ matrix.output }} \;
-
-      - name: Upload artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: ${{ matrix.output }}
-          path: publish/${{ matrix.output }}
-
   release:
-    name: Create GitHub Release
-    needs: build
     runs-on: ubuntu-latest
-
-    steps:
-      - uses: actions/download-artifact@v4
-        with:
-          path: artifacts/
-          merge-multiple: true
-
-      - name: Create release
-        uses: softprops/action-gh-release@v2
-        with:
-          files: artifacts/*
-          generate_release_notes: true
-          draft: false
-
-  docker:
-    name: Docker (ghcr.io)
-    needs: build
-    runs-on: ubuntu-latest
+    permissions:
+      contents: write   # needed to create GitHub releases
 
     steps:
       - uses: actions/checkout@v4
 
-      - name: Log in to GitHub Container Registry
-        uses: docker/login-action@v3
+      - uses: actions/setup-dotnet@v4
         with:
-          registry: ghcr.io
-          username: ${{ github.actor }}
-          password: ${{ secrets.GITHUB_TOKEN }}
+          dotnet-version: '10.x'
 
-      - name: Extract metadata
-        id: meta
-        uses: docker/metadata-action@v5
-        with:
-          images: ghcr.io/${{ github.repository }}
-          tags: |
-            type=semver,pattern={{version}}
-            type=semver,pattern={{major}}.{{minor}}
-            type=raw,value=latest
+      - name: Build binaries
+        run: |
+          dotnet publish src/DnsSync -c Release -r osx-arm64 --self-contained \
+            -p:PublishSingleFile=true -o out/osx-arm64
+          dotnet publish src/DnsSync -c Release -r osx-x64 --self-contained \
+            -p:PublishSingleFile=true -o out/osx-x64
+          dotnet publish src/DnsSync -c Release -r linux-x64 --self-contained \
+            -p:PublishSingleFile=true -o out/linux-x64
+          cp out/osx-arm64/dns-sync out/dns-sync-darwin-arm64
+          cp out/osx-x64/dns-sync  out/dns-sync-darwin-x64
+          cp out/linux-x64/dns-sync out/dns-sync-linux-x64
 
-      - name: Build and push Docker image
-        uses: docker/build-push-action@v6
-        with:
-          context: .
-          push: true
-          tags: ${{ steps.meta.outputs.tags }}
-          labels: ${{ steps.meta.outputs.labels }}
+      - name: Create GitHub Release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release create "${{ github.ref_name }}" \
+            out/dns-sync-darwin-arm64 \
+            out/dns-sync-darwin-x64 \
+            out/dns-sync-linux-x64 \
+            --title "${{ github.ref_name }}" \
+            --generate-notes
+
+      - name: Update Homebrew tap
+        # Requires a PAT with repo scope stored as secret HOMEBREW_TAP_TOKEN
+        # Create at: https://github.com/settings/tokens/new?scopes=repo
+        # Add at:    https://github.com/cl8dep/dns-sync/settings/secrets/actions
+        if: env.HOMEBREW_TAP_TOKEN != ''
+        env:
+          HOMEBREW_TAP_TOKEN: ${{ secrets.HOMEBREW_TAP_TOKEN }}
+        run: |
+          VERSION="${{ github.ref_name }}"
+          VERSION_NUM="${VERSION#v}"
+          SHA_ARM64=$(sha256sum out/dns-sync-darwin-arm64 | awk '{print $1}')
+          SHA_X64=$(sha256sum out/dns-sync-darwin-x64 | awk '{print $1}')
+
+          git clone "https://x-access-token:${HOMEBREW_TAP_TOKEN}@github.com/cl8dep/homebrew-tap.git"
+          cd homebrew-tap
+
+          cat > Formula/dns-sync.rb << EOF
+class DnsSync < Formula
+  desc "DNS as code. Sync DNS zones across providers (Cloudflare, GCP Cloud DNS)"
+  homepage "https://github.com/cl8dep/dns-sync"
+  version "${VERSION_NUM}"
+  license "MIT"
+
+  on_macos do
+    if Hardware::CPU.arm?
+      url "https://github.com/cl8dep/dns-sync/releases/download/${VERSION}/dns-sync-darwin-arm64"
+      sha256 "${SHA_ARM64}"
+    else
+      url "https://github.com/cl8dep/dns-sync/releases/download/${VERSION}/dns-sync-darwin-x64"
+      sha256 "${SHA_X64}"
+    end
+  end
+
+  def install
+    binary = Hardware::CPU.arm? ? "dns-sync-darwin-arm64" : "dns-sync-darwin-x64"
+    bin.install binary => "dns-sync"
+  end
+
+  test do
+    assert_match version.to_s, shell_output("#{bin}/dns-sync --version")
+  end
+end
+EOF
+
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git config user.name "github-actions[bot]"
+          git add Formula/dns-sync.rb
+          git diff --staged --quiet || git commit -m "Update dns-sync to ${VERSION}"
+          git push
