@@ -10,11 +10,15 @@ using Spectre.Console;
 using Spectre.Console.Cli;
 
 // Load .env file early — before config interpolation and logging setup.
+// Buffer log messages and emit them after Serilog is configured.
 // Explicit: --env-file <path>  → load that file (error if not found)
-// Implicit: no flag            → silently try .env in the current directory
+// Implicit: no flag            → silently try .env in current directory
 var envFileArg = args.Contains("--env-file")
     ? args.SkipWhile(a => a != "--env-file").Skip(1).FirstOrDefault()
     : null;
+
+string? dotEnvInfo = null;
+string? dotEnvDebug = null;
 
 if (envFileArg is not null)
 {
@@ -23,12 +27,13 @@ if (envFileArg is not null)
         Console.Error.WriteLine($"✗ .env file not found: {envFileArg}");
         return 1;
     }
-    DotEnvLoader.Load(envFileArg);
+    var loaded = DotEnvLoader.Load(envFileArg);
+    dotEnvInfo = $"Loaded .env file: {envFileArg} ({loaded} variable(s) set)";
 }
 else
 {
-    // Auto-detect .env in current directory (silent if missing)
-    DotEnvLoader.TryLoad(".env", out _);
+    if (DotEnvLoader.TryLoad(".env", out var loaded))
+        dotEnvDebug = $"Auto-detected .env in current directory ({loaded} variable(s) set)";
 }
 
 // Parse log level early from args before DI is built
@@ -71,6 +76,11 @@ if (logFile is not null)
         shared: false);
 
 Log.Logger = logConfig.CreateLogger();
+
+if (dotEnvInfo is not null)
+    Log.Information(dotEnvInfo);
+if (dotEnvDebug is not null)
+    Log.Debug(dotEnvDebug);
 
 var services = new ServiceCollection();
 services.AddLogging(b => b
