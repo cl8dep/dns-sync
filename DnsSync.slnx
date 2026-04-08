@@ -1,0 +1,8 @@
+<Solution>
+  <Folder Name="/src/">
+    <Project Path="src/DnsSync/DnsSync.csproj" />
+  </Folder>
+  <Folder Name="/tests/">
+    <Project Path="tests/DnsSync.Tests/DnsSync.Tests.csproj" />
+  </Folder>
+</Solution>

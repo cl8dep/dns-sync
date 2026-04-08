@@ -1,0 +1,43 @@
+# dns-sync configuration example
+# Copy this to config.yaml and fill in your credentials.
+# NEVER commit config.yaml — it is in .gitignore.
+# All ${ENV_VAR} references are interpolated from environment variables at runtime.
+
+providers:
+  # Built-in YAML file provider (read-only source)
+  yaml_source:
+    type: yaml
+    directory: ./zones        # path to zone YAML files
+
+  # Cloudflare DNS (read + write)
+  cloudflare:
+    type: cloudflare
+    api_token: "${CF_API_TOKEN}"   # Zone:DNS:Edit scoped API token
+
+  # AWS Route53 (coming in Phase 2)
+  # route53:
+  #   type: route53
+  #   access_key_id: "${AWS_ACCESS_KEY_ID}"
+  #   secret_access_key: "${AWS_SECRET_ACCESS_KEY}"
+  #   region: us-east-1
+
+  # GCP Cloud DNS (coming in Phase 2)
+  # gcp:
+  #   type: gcp_cloud_dns
+  #   project: "${GCP_PROJECT}"
+  #   credentials_file: "${GOOGLE_APPLICATION_CREDENTIALS}"
+
+zones:
+  # Each zone maps a DNS domain to a source + one or more targets.
+  # The source is read-only; targets are synced to match.
+
+  example.com.:
+    source: yaml_source
+    targets:
+      - cloudflare
+
+  # internal.example.com.:
+  #   source: yaml_source
+  #   targets:
+  #     - cloudflare
+  #     - route53

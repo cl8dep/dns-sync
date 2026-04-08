@@ -1,0 +1,23 @@
+## .NET
+bin/
+obj/
+*.user
+*.suo
+.vs/
+*.swp
+.idea/
+
+## Publish
+publish/
+out/
+
+## Secrets (never commit)
+config.yaml
+.env
+
+## Zone files (local data, not for public repos)
+domains/
+
+## OS
+.DS_Store
+Thumbs.db
