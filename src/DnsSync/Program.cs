@@ -1,4 +1,5 @@
 using DnsSync.Commands;
+using DnsSync.Config;
 using DnsSync.Infrastructure;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
@@ -7,6 +8,28 @@ using Serilog.Events;
 using Serilog.Formatting.Compact;
 using Spectre.Console;
 using Spectre.Console.Cli;
+
+// Load .env file early — before config interpolation and logging setup.
+// Explicit: --env-file <path>  → load that file (error if not found)
+// Implicit: no flag            → silently try .env in the current directory
+var envFileArg = args.Contains("--env-file")
+    ? args.SkipWhile(a => a != "--env-file").Skip(1).FirstOrDefault()
+    : null;
+
+if (envFileArg is not null)
+{
+    if (!File.Exists(envFileArg))
+    {
+        Console.Error.WriteLine($"✗ .env file not found: {envFileArg}");
+        return 1;
+    }
+    DotEnvLoader.Load(envFileArg);
+}
+else
+{
+    // Auto-detect .env in current directory (silent if missing)
+    DotEnvLoader.TryLoad(".env", out _);
+}
 
 // Parse log level early from args before DI is built
 var verbose = args.Contains("--verbose") || args.Contains("-v");

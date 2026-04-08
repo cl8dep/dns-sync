@@ -29,4 +29,8 @@ public class BaseSettings : CommandSettings
     [CommandOption("--log-file <PATH>")]
     [Description("Also write logs to a file at the specified path")]
     public string? LogFile { get; set; }
+
+    [CommandOption("--env-file <PATH>")]
+    [Description("Load environment variables from a .env file (default: .env in current directory)")]
+    public string? EnvFile { get; set; }
 }
