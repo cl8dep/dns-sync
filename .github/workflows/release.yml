@@ -46,46 +46,20 @@ jobs:
         # Requires a PAT with repo scope stored as secret HOMEBREW_TAP_TOKEN
         # Create at: https://github.com/settings/tokens/new?scopes=repo
         # Add at:    https://github.com/cl8dep/dns-sync/settings/secrets/actions
-        if: env.HOMEBREW_TAP_TOKEN != ''
+        if: ${{ secrets.HOMEBREW_TAP_TOKEN != '' }}
         env:
           HOMEBREW_TAP_TOKEN: ${{ secrets.HOMEBREW_TAP_TOKEN }}
+          VERSION: ${{ github.ref_name }}
         run: |
-          VERSION="${{ github.ref_name }}"
-          VERSION_NUM="${VERSION#v}"
-          SHA_ARM64=$(sha256sum out/dns-sync-darwin-arm64 | awk '{print $1}')
-          SHA_X64=$(sha256sum out/dns-sync-darwin-x64 | awk '{print $1}')
+          export VERSION_NUM="${VERSION#v}"
+          export SHA_ARM64=$(sha256sum out/dns-sync-darwin-arm64 | awk '{print $1}')
+          export SHA_X64=$(sha256sum out/dns-sync-darwin-x64 | awk '{print $1}')
 
           git clone "https://x-access-token:${HOMEBREW_TAP_TOKEN}@github.com/cl8dep/homebrew-tap.git"
+
+          python3 .github/scripts/update-tap.py homebrew-tap/Formula/dns-sync.rb
+
           cd homebrew-tap
-
-          cat > Formula/dns-sync.rb << EOF
-class DnsSync < Formula
-  desc "DNS as code. Sync DNS zones across providers (Cloudflare, GCP Cloud DNS)"
-  homepage "https://github.com/cl8dep/dns-sync"
-  version "${VERSION_NUM}"
-  license "MIT"
-
-  on_macos do
-    if Hardware::CPU.arm?
-      url "https://github.com/cl8dep/dns-sync/releases/download/${VERSION}/dns-sync-darwin-arm64"
-      sha256 "${SHA_ARM64}"
-    else
-      url "https://github.com/cl8dep/dns-sync/releases/download/${VERSION}/dns-sync-darwin-x64"
-      sha256 "${SHA_X64}"
-    end
-  end
-
-  def install
-    binary = Hardware::CPU.arm? ? "dns-sync-darwin-arm64" : "dns-sync-darwin-x64"
-    bin.install binary => "dns-sync"
-  end
-
-  test do
-    assert_match version.to_s, shell_output("#{bin}/dns-sync --version")
-  end
-end
-EOF
-
           git config user.email "github-actions[bot]@users.noreply.github.com"
           git config user.name "github-actions[bot]"
           git add Formula/dns-sync.rb
