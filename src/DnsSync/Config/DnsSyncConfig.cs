@@ -37,12 +37,19 @@ public class ProviderConfig
     [YamlMember(Alias = "region")]
     public string? Region { get; set; }
 
-    // gcp (future)
+    // gcp_cloud_dns provider
     [YamlMember(Alias = "project")]
     public string? Project { get; set; }
 
     [YamlMember(Alias = "credentials_file")]
     public string? CredentialsFile { get; set; }
+
+    /// <summary>
+    /// Restrict zone lookups by visibility.
+    /// true = private zones only, false = public zones only, null = no restriction.
+    /// </summary>
+    [YamlMember(Alias = "private")]
+    public bool? Private { get; set; }
 }
 
 public class ZoneConfig

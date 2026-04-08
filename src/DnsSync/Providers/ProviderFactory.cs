@@ -1,5 +1,6 @@
 using DnsSync.Config;
 using DnsSync.Providers.Cloudflare;
+using DnsSync.Providers.Gcp;
 using DnsSync.Providers.Yaml;
 using Microsoft.Extensions.Logging;
 
@@ -21,9 +22,15 @@ public static class ProviderFactory
                 loggerFactory.CreateLogger<CloudflareProvider>(),
                 config.AccountId),
 
+            "gcp_cloud_dns" => new GcpCloudDnsProvider(
+                config.Project,
+                config.CredentialsFile,
+                config.Private,
+                loggerFactory.CreateLogger<GcpCloudDnsProvider>()),
+
             _ => throw new NotSupportedException(
                 $"Provider type '{config.Type}' is not supported in this build. " +
-                "Supported types: yaml, cloudflare")
+                "Supported types: yaml, cloudflare, gcp_cloud_dns")
         };
     }
 }
