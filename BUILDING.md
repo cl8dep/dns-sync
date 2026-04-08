@@ -42,19 +42,19 @@ Single-file, self-contained executables (no .NET runtime required on target mach
 ```bash
 # macOS Apple Silicon
 dotnet publish src/DnsSync -c Release -r osx-arm64 --self-contained \
-  -p:PublishSingleFile=true -p:PublishTrimmed=true -o out/osx-arm64
+  -p:PublishSingleFile=true -o out/osx-arm64
 
 # macOS Intel
 dotnet publish src/DnsSync -c Release -r osx-x64 --self-contained \
-  -p:PublishSingleFile=true -p:PublishTrimmed=true -o out/osx-x64
+  -p:PublishSingleFile=true -o out/osx-x64
 
 # Linux x64
 dotnet publish src/DnsSync -c Release -r linux-x64 --self-contained \
-  -p:PublishSingleFile=true -p:PublishTrimmed=true -o out/linux-x64
+  -p:PublishSingleFile=true -o out/linux-x64
 
 # Windows x64
 dotnet publish src/DnsSync -c Release -r win-x64 --self-contained \
-  -p:PublishSingleFile=true -p:PublishTrimmed=true -o out/win-x64
+  -p:PublishSingleFile=true -o out/win-x64
 ```
 
 The resulting binaries are in `out/<rid>/dns-sync` (or `dns-sync.exe` on Windows).
