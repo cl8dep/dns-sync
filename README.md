@@ -7,9 +7,9 @@ A fast, self-contained CLI for syncing DNS records across providers — inspired
 Define your DNS zones as YAML files, then let `dns-sync` keep your providers in sync.
 
 ```
-dns-sync plan   --config config.yaml    # Preview what would change
-dns-sync apply  --config config.yaml    # Apply changes
-dns-sync validate --config config.yaml  # Check config and zone files
+dns-sync validate --config config.yaml   # Validate config and zone files (no network calls)
+dns-sync plan     --config config.yaml   # Preview what would change
+dns-sync apply    --config config.yaml   # Apply changes
 ```
 
 ---
@@ -21,9 +21,9 @@ dns-sync validate --config config.yaml  # Check config and zone files
 | Python-only, complex install | Single self-contained binary — no runtime needed |
 | Stack traces as errors | Friendly `✗` messages with actionable hints |
 | No pre-flight validation | Verifies API credentials before touching anything |
-| Opaque diff output | Color-coded plan: `+` green / `~` yellow / `-` red |
+| Opaque diff output | Color-coded plan with before/after for updates |
 | `--doit` naming | Clear `plan` vs `apply` commands |
-| No structured logging | `--log-file` + GCP Cloud Logging (auto-detected) |
+| No structured logging | `--log-file` + GCP Cloud Logging (auto-detected in Cloud Run) |
 
 ---
 
@@ -38,6 +38,10 @@ Download the latest release for your platform from the [Releases page](https://g
 curl -L https://github.com/cl8dep/dns-sync/releases/latest/download/dns-sync-darwin-arm64 \
   -o /usr/local/bin/dns-sync && chmod +x /usr/local/bin/dns-sync
 
+# macOS x64
+curl -L https://github.com/cl8dep/dns-sync/releases/latest/download/dns-sync-darwin-x64 \
+  -o /usr/local/bin/dns-sync && chmod +x /usr/local/bin/dns-sync
+
 # Linux x64
 curl -L https://github.com/cl8dep/dns-sync/releases/latest/download/dns-sync-linux-x64 \
   -o /usr/local/bin/dns-sync && chmod +x /usr/local/bin/dns-sync
@@ -46,11 +50,21 @@ curl -L https://github.com/cl8dep/dns-sync/releases/latest/download/dns-sync-lin
 ### Build from source
 
 ```bash
-git clone https://github.com/cl8dep/dns-sync.git
+git clone --recurse-submodules https://github.com/cl8dep/dns-sync.git
 cd dns-sync
 dotnet publish src/DnsSync -c Release -r linux-x64 --self-contained \
   -p:PublishSingleFile=true -p:DebugType=none -o out/
 ./out/dns-sync --version
+```
+
+### Docker
+
+```bash
+docker run --rm \
+  -e CLOUDFLARE_API_TOKEN=your_token \
+  -v $(pwd)/config.yaml:/app/config.yaml \
+  -v $(pwd)/zones:/app/zones \
+  ghcr.io/cl8dep/dns-sync:latest plan --config /app/config.yaml
 ```
 
 ---
@@ -63,10 +77,11 @@ dotnet publish src/DnsSync -c Release -r linux-x64 --self-contained \
 cp config.example.yaml config.yaml
 ```
 
-**2. Set your Cloudflare API token:**
+**2. Set your credentials:**
 
 ```bash
-export CF_API_TOKEN=your_cloudflare_token_here
+export CLOUDFLARE_API_TOKEN=your_token_here
+export CLOUDFLARE_ACCOUNT_ID=your_account_id  # optional but recommended
 ```
 
 **3. Create a zone file** (`zones/example.com.yaml`):
@@ -107,22 +122,25 @@ dns-sync apply --config config.yaml
 
 ```yaml
 providers:
-  yaml_source:
+  zones:
     type: yaml
-    directory: ./zones          # path to zone YAML files
+    directory: ./zones          # relative to this config file
 
   cloudflare:
     type: cloudflare
-    api_token: "${CF_API_TOKEN}" # Zone:DNS:Edit scoped token
+    api_token: ${CLOUDFLARE_API_TOKEN}    # Zone:DNS:Edit scoped token
+    account_id: ${CLOUDFLARE_ACCOUNT_ID} # optional — scopes zone lookups to one account
 
 zones:
   example.com.:
-    source: yaml_source
+    source: zones
     targets:
       - cloudflare
 ```
 
 All `${ENV_VAR}` references are interpolated from environment variables at runtime. Never put secrets directly in config files.
+
+> **Note:** `directory` paths are resolved relative to the config file location, not the current working directory. You can run `dns-sync` from any folder.
 
 ---
 
@@ -165,7 +183,7 @@ _dmarc:
       value: "letsencrypt.org"
 ```
 
-**Supported record types:** A, AAAA, CNAME, MX, TXT, NS, CAA
+**Supported record types:** A, AAAA, CNAME, MX, TXT, NS, CAA, SRV
 
 ---
 
@@ -176,32 +194,30 @@ _dmarc:
 Validates config structure and zone files without making any network calls.
 
 ```
-dns-sync validate --config config.yaml
+dns-sync validate --config config.yaml [--strict]
 ```
 
 ### `dns-sync plan`
 
-Shows what would change. Reads source zone and compares against each target provider. No writes.
+Shows what would change. No writes to any provider.
 
 ```
 dns-sync plan --config config.yaml
 dns-sync plan --config config.yaml --include-apex-ns
+dns-sync plan --config config.yaml --output json       # machine-readable output
+dns-sync plan --config config.yaml --exit-code         # returns 2 if changes pending
 ```
 
-Output:
+Example output:
 ```
-✓ Config valid (1 zone, 2 providers)
-
-Running pre-flight checks...
-✓ Source provider 'yaml_source' reachable
-✓ Target provider 'cloudflare' reachable
-
 Zone: example.com. → cloudflare
-  + api.example.com.                             A      300  203.0.113.10  (new)
-  ~ mail.example.com.                            A     3600→300  203.0.113.20  (ttl only)
-  - old.example.com.                             A     3600  (deleted)
+  + api.example.com.                         A      300  203.0.113.10
+  ~ mail.example.com.                        A     3600
+      before: 203.0.113.5
+      after:  203.0.113.20
+  - old.example.com.                         A     3600  203.0.113.1
 
-3 change(s) — run dns-sync apply to apply.
+  1 create(s), 1 update(s), 1 delete(s)
 ```
 
 ### `dns-sync apply`
@@ -209,15 +225,17 @@ Zone: example.com. → cloudflare
 Applies changes to all target providers.
 
 ```
-dns-sync apply --config config.yaml           # interactive confirmation
-dns-sync apply --config config.yaml --yes     # non-interactive (CI/CD)
-dns-sync apply --config config.yaml --max-changes 100  # raise safety limit
-dns-sync apply --config config.yaml --force   # skip safety limit entirely
+dns-sync apply --config config.yaml                   # interactive confirmation
+dns-sync apply --config config.yaml --yes             # non-interactive (CI/CD)
+dns-sync apply --config config.yaml --max-changes 100 # raise safety limit
+dns-sync apply --config config.yaml --force           # skip safety limit
 ```
 
 ---
 
-## Global flags
+## Flags
+
+### Global
 
 | Flag | Description |
 |---|---|
@@ -225,27 +243,36 @@ dns-sync apply --config config.yaml --force   # skip safety limit entirely
 | `--strict` | Treat warnings as errors |
 | `-v, --verbose` | Enable debug log output |
 | `--no-color` | Disable ANSI colors (`NO_COLOR` env var also respected) |
-| `--gcp-logs` | Structured JSON output for GCP Cloud Logging (auto in Cloud Run) |
+| `--gcp-logs` | Structured JSON output for GCP Cloud Logging (auto-enabled in Cloud Run) |
 | `--log-file <PATH>` | Also write logs to a file |
 
-### Apply-specific flags
+### Plan-specific
+
+| Flag | Description |
+|---|---|
+| `--include-apex-ns` | Include apex NS records in diff (excluded by default) |
+| `--output <FORMAT>` | Output format: `text` (default) or `json` |
+| `--exit-code` | Return exit code `2` when changes are pending (Terraform-compatible) |
+
+### Apply-specific
 
 | Flag | Description |
 |---|---|
 | `-y, --yes` | Skip confirmation prompt |
 | `--max-changes <N>` | Abort if plan > N changes (default: 50) |
 | `--force` | Override `--max-changes` |
-| `--include-apex-ns` | Include apex NS records in diff (excluded by default) |
+| `--include-apex-ns` | Include apex NS records in diff |
 
 ---
 
 ## Safety features
 
-- **Pre-flight checks** — verifies API credentials before touching any DNS records
+- **Pre-flight checks** — verifies API credentials and connectivity before touching any DNS records
 - **`--max-changes 50`** — aborts if plan exceeds 50 changes (prevents accidental mass deletion)
 - **Interactive confirmation** — shows full plan and asks before applying (skip with `--yes`)
 - **SOA excluded** — SOA records are never synced (they'd corrupt the zone serial)
 - **Apex NS excluded** — apex NS records are excluded by default to prevent registrar conflicts
+- **`account_id` scoping** — Cloudflare zone lookups can be scoped to a specific account
 
 ---
 
@@ -272,8 +299,8 @@ dotnet test
 # Run locally
 dotnet run --project src/DnsSync -- plan --config config.yaml
 
-# Publish single binary (linux)
-dotnet publish src/DnsSync -c Release -r linux-x64 --self-contained \
+# Publish single binary (macOS arm64)
+dotnet publish src/DnsSync -c Release -r osx-arm64 --self-contained \
   -p:PublishSingleFile=true -p:DebugType=none -o out/
 ```
 
