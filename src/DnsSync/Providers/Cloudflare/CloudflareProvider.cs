@@ -625,10 +625,33 @@ public class CloudflareProvider : IProvider
         return lower.EndsWith('.') ? lower : lower + ".";
     }
 
-    private static string StripTxtQuotes(string content) =>
-        content.StartsWith('"') && content.EndsWith('"')
-            ? content[1..^1]
-            : content;
+    /// <summary>
+    /// Cloudflare returns TXT record content as DNS wire-format quoted strings.
+    /// Long values (e.g. DKIM keys) are split into 255-byte chunks:
+    ///   "chunk1" "chunk2"
+    /// This method joins all chunks into a single plain string.
+    /// </summary>
+    private static string StripTxtQuotes(string content)
+    {
+        content = content.Trim();
+        if (!content.StartsWith('"')) return content;
+
+        var sb = new System.Text.StringBuilder();
+        var i = 0;
+        while (i < content.Length)
+        {
+            if (content[i] == '"')
+            {
+                i++; // skip opening quote
+                while (i < content.Length && content[i] != '"')
+                    sb.Append(content[i++]);
+                if (i < content.Length) i++; // skip closing quote
+            }
+            else
+                i++; // skip whitespace between chunks
+        }
+        return sb.ToString();
+    }
 }
 
 internal sealed class CloudflareRateLimitException : Exception { }
