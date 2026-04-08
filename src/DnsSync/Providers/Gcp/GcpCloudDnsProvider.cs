@@ -21,9 +21,14 @@ public class GcpCloudDnsProvider : IProvider
     private readonly ILogger<GcpCloudDnsProvider> _logger;
     private readonly HttpClient _http;
 
-    // Service account credentials (null when using metadata server ADC)
+    // Service account credentials (null when using metadata server or user ADC)
     private readonly string? _serviceAccountEmail;
     private readonly string? _privateKeyPem;
+
+    // OAuth2 user credentials (authorized_user from gcloud ADC file)
+    private readonly string? _oauthClientId;
+    private readonly string? _oauthClientSecret;
+    private readonly string? _oauthRefreshToken;
 
     // Cached access token
     private string? _accessToken;
@@ -48,22 +53,47 @@ public class GcpCloudDnsProvider : IProvider
         _privateZones = privateZones;
         _http = new HttpClient { Timeout = TimeSpan.FromSeconds(30) };
 
-        // Resolve credentials file: explicit config > GOOGLE_APPLICATION_CREDENTIALS env var
+        // ADC credential resolution order (mirrors the official ADC chain):
+        //   1. explicit credentials_file config option
+        //   2. GOOGLE_APPLICATION_CREDENTIALS env var
+        //   3. Well-known gcloud ADC file (~/.config/gcloud/application_default_credentials.json)
+        //   4. GCE/Cloud Run metadata server
         var resolvedCreds = credentialsFile is not null
             ? Path.GetFullPath(Environment.ExpandEnvironmentVariables(credentialsFile))
-            : Environment.GetEnvironmentVariable("GOOGLE_APPLICATION_CREDENTIALS");
+            : Environment.GetEnvironmentVariable("GOOGLE_APPLICATION_CREDENTIALS")
+              ?? GetWellKnownAdcPath();
 
         if (resolvedCreds is not null && File.Exists(resolvedCreds))
         {
             var doc = JsonDocument.Parse(File.ReadAllText(resolvedCreds));
             var root = doc.RootElement;
 
-            _serviceAccountEmail = root.TryGetProperty("client_email", out var e) ? e.GetString() : null;
-            _privateKeyPem = root.TryGetProperty("private_key", out var k) ? k.GetString() : null;
+            var credType = root.TryGetProperty("type", out var t) ? t.GetString() : "service_account";
 
-            // Derive project from the credentials file if not explicitly set in config
-            if (string.IsNullOrEmpty(project) && root.TryGetProperty("project_id", out var pid))
-                project = pid.GetString();
+            if (credType == "authorized_user")
+            {
+                // gcloud ADC file — OAuth2 user credentials (refresh_token flow)
+                _oauthClientId = root.TryGetProperty("client_id", out var cid) ? cid.GetString() : null;
+                _oauthClientSecret = root.TryGetProperty("client_secret", out var cs) ? cs.GetString() : null;
+                _oauthRefreshToken = root.TryGetProperty("refresh_token", out var rt) ? rt.GetString() : null;
+
+                // quota_project_id is the project field in gcloud ADC files
+                if (string.IsNullOrEmpty(project) && root.TryGetProperty("quota_project_id", out var qpid))
+                    project = qpid.GetString();
+
+                _logger.LogDebug("Using gcloud user credentials (authorized_user) from {Path}", resolvedCreds);
+            }
+            else
+            {
+                // Service account JSON key file
+                _serviceAccountEmail = root.TryGetProperty("client_email", out var e) ? e.GetString() : null;
+                _privateKeyPem = root.TryGetProperty("private_key", out var k) ? k.GetString() : null;
+
+                if (string.IsNullOrEmpty(project) && root.TryGetProperty("project_id", out var pid))
+                    project = pid.GetString();
+
+                _logger.LogDebug("Using service account credentials from {Path}", resolvedCreds);
+            }
         }
         else if (resolvedCreds is not null)
         {
@@ -392,6 +422,10 @@ public class GcpCloudDnsProvider : IProvider
         {
             _accessToken = await GetServiceAccountTokenAsync(ct);
         }
+        else if (_oauthRefreshToken is not null)
+        {
+            _accessToken = await GetUserCredentialTokenAsync(ct);
+        }
         else
         {
             _accessToken = await GetMetadataTokenAsync(ct);
@@ -447,6 +481,29 @@ public class GcpCloudDnsProvider : IProvider
         _tokenExpiry = DateTimeOffset.UtcNow.AddSeconds(expiresIn);
 
         _logger.LogDebug("Obtained GCP access token via metadata server ADC (expires in {Seconds}s)", expiresIn);
+        return token;
+    }
+
+    private async Task<string> GetUserCredentialTokenAsync(CancellationToken ct)
+    {
+        // Exchange OAuth2 refresh token for an access token (authorized_user / gcloud ADC flow)
+        var resp = await _http.PostAsync(
+            "https://oauth2.googleapis.com/token",
+            new FormUrlEncodedContent([
+                new KeyValuePair<string, string>("grant_type", "refresh_token"),
+                new KeyValuePair<string, string>("client_id", _oauthClientId!),
+                new KeyValuePair<string, string>("client_secret", _oauthClientSecret!),
+                new KeyValuePair<string, string>("refresh_token", _oauthRefreshToken!)
+            ]), ct);
+
+        resp.EnsureSuccessStatusCode();
+
+        var doc = JsonDocument.Parse(await resp.Content.ReadAsStringAsync(ct));
+        var token = doc.RootElement.GetProperty("access_token").GetString()!;
+        var expiresIn = doc.RootElement.TryGetProperty("expires_in", out var exp) ? exp.GetInt32() : 3600;
+        _tokenExpiry = DateTimeOffset.UtcNow.AddSeconds(expiresIn);
+
+        _logger.LogDebug("Obtained GCP access token via gcloud user credentials (expires in {Seconds}s)", expiresIn);
         return token;
     }
 
@@ -556,6 +613,29 @@ public class GcpCloudDnsProvider : IProvider
         HttpStatusCode.RequestTimeout;
 
     // ─── Helpers ──────────────────────────────────────────────────────────────
+
+    /// <summary>
+    /// Returns the platform-specific path to the gcloud ADC well-known credentials file,
+    /// or null if the file does not exist.
+    /// Linux/macOS: ~/.config/gcloud/application_default_credentials.json
+    /// Windows:     %APPDATA%\gcloud\application_default_credentials.json
+    /// </summary>
+    private static string? GetWellKnownAdcPath()
+    {
+        string path;
+        if (OperatingSystem.IsWindows())
+        {
+            var appData = Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData);
+            path = Path.Combine(appData, "gcloud", "application_default_credentials.json");
+        }
+        else
+        {
+            var home = Environment.GetFolderPath(Environment.SpecialFolder.UserProfile);
+            path = Path.Combine(home, ".config", "gcloud", "application_default_credentials.json");
+        }
+
+        return File.Exists(path) ? path : null;
+    }
 
     private static string NormalizeZoneName(string name)
     {
