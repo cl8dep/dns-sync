@@ -21,12 +21,14 @@ jobs:
 
       - name: Build binaries
         run: |
+          VERSION_NUM="${{ github.ref_name }}"
+          VERSION_NUM="${VERSION_NUM#v}"
           dotnet publish src/DnsSync -c Release -r osx-arm64 --self-contained \
-            -p:PublishSingleFile=true -o out/osx-arm64
+            -p:PublishSingleFile=true -p:Version="${VERSION_NUM}" -o out/osx-arm64
           dotnet publish src/DnsSync -c Release -r osx-x64 --self-contained \
-            -p:PublishSingleFile=true -o out/osx-x64
+            -p:PublishSingleFile=true -p:Version="${VERSION_NUM}" -o out/osx-x64
           dotnet publish src/DnsSync -c Release -r linux-x64 --self-contained \
-            -p:PublishSingleFile=true -o out/linux-x64
+            -p:PublishSingleFile=true -p:Version="${VERSION_NUM}" -o out/linux-x64
           cp out/osx-arm64/dns-sync out/dns-sync-darwin-arm64
           cp out/osx-x64/dns-sync  out/dns-sync-darwin-x64
           cp out/linux-x64/dns-sync out/dns-sync-linux-x64

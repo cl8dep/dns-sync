@@ -8,6 +8,7 @@
     <AssemblyName>dns-sync</AssemblyName>
     <RootNamespace>DnsSync</RootNamespace>
     <Optimize>true</Optimize>
+    <Version>0.0.0-dev</Version>
   </PropertyGroup>
 
   <ItemGroup>

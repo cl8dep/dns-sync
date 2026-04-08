@@ -1,3 +1,4 @@
+using System.Reflection;
 using DnsSync.Commands;
 using DnsSync.Config;
 using DnsSync.Infrastructure;
@@ -8,6 +9,7 @@ using Serilog.Events;
 using Serilog.Formatting.Compact;
 using Spectre.Console;
 using Spectre.Console.Cli;
+using Spectre.Console.Cli.Help;
 
 // Load .env file early — before config interpolation and logging setup.
 // Buffer log messages and emit them after Serilog is configured.
@@ -90,10 +92,32 @@ services.AddLogging(b => b
 var registrar = new TypeRegistrar(services);
 var app = new CommandApp(registrar);
 
+var version = typeof(Program).Assembly
+    .GetCustomAttribute<AssemblyInformationalVersionAttribute>()
+    ?.InformationalVersion ?? "unknown";
+
 app.Configure(config =>
 {
     config.SetApplicationName("dns-sync");
-    config.SetApplicationVersion("1.0.0");
+    config.SetApplicationVersion(version);
+
+    // Clean up help colors: replace hard-to-read yellow headers and
+    // barely-visible dim gray command names with readable alternatives.
+    var defaultStyles = HelpProviderStyle.Default;
+    config.Settings.HelpProviderStyles = new HelpProviderStyle
+    {
+        Description = defaultStyles.Description,
+        Usage       = defaultStyles.Usage,
+        Examples    = defaultStyles.Examples,
+        Arguments   = defaultStyles.Arguments,
+        Options     = defaultStyles.Options,
+        Commands    = new CommandStyle
+        {
+            Header           = new Style(Color.White, decoration: Decoration.Bold),
+            ChildCommand     = new Style(Color.White),
+            RequiredArgument = defaultStyles.Commands?.RequiredArgument,
+        },
+    };
 
     config.AddCommand<ValidateCommand>("validate")
         .WithDescription("Validate config and zone files without making network calls")
