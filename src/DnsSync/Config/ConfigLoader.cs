@@ -24,8 +24,19 @@ public static class ConfigLoader
             .IgnoreUnmatchedProperties()
             .Build();
 
-        return deserializer.Deserialize<DnsSyncConfig>(interpolated)
+        var config = deserializer.Deserialize<DnsSyncConfig>(interpolated)
                ?? throw new InvalidOperationException("Config file is empty or invalid.");
+
+        // Resolve relative paths in provider configs against the config file's directory,
+        // not the current working directory. This lets users run dns-sync from any folder.
+        var configDir = Path.GetDirectoryName(Path.GetFullPath(path))!;
+        foreach (var provider in config.Providers.Values)
+        {
+            if (!string.IsNullOrEmpty(provider.Directory) && !Path.IsPathRooted(provider.Directory))
+                provider.Directory = Path.GetFullPath(Path.Combine(configDir, provider.Directory));
+        }
+
+        return config;
     }
 
     public static string InterpolateEnvVars(string input)

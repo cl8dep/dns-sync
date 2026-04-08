@@ -28,7 +28,10 @@ public class ConfigLoaderTests
         config.Providers.Count.ShouldBe(2);
         config.Providers.ShouldContainKey("yaml_source");
         config.Providers["yaml_source"].Type.ShouldBe("yaml");
-        config.Providers["yaml_source"].Directory.ShouldBe("./zones");
+        // Directory is resolved to an absolute path relative to the config file location
+        config.Providers["yaml_source"].Directory.ShouldNotBeNullOrEmpty();
+        Path.IsPathRooted(config.Providers["yaml_source"].Directory).ShouldBeTrue();
+        config.Providers["yaml_source"].Directory.ShouldEndWith("zones");
     }
 
     [Fact]
