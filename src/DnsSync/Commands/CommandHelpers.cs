@@ -39,7 +39,7 @@ public static class CommandHelpers
         return config;
     }
 
-    public static void PrintPlan(DnsPlan plan, string zoneName, string targetName)
+    public static void PrintPlan(DnsPlan plan, string zoneName, string targetName, bool wide = false)
     {
         AnsiConsole.MarkupLine($"\nZone: [bold]{Markup.Escape(zoneName)}[/] → [bold]{Markup.Escape(targetName)}[/]");
 
@@ -56,33 +56,45 @@ public static class CommandHelpers
                 case ChangeType.Create:
                     AnsiConsole.MarkupLine(
                         $"  [green]+[/] {Markup.Escape(change.RecordName),-45} " +
-                        $"[green]{change.RecordType,-6}[/] {change.After!.Ttl,5}  " +
-                        $"{Markup.Escape(Truncate(change.After.FormatValues()))}");
+                        $"[green]{change.RecordType,-6}[/] {change.After!.Ttl,5}" +
+                        (wide ? "" : $"  {Markup.Escape(Truncate(change.After.FormatValues()))}"));
+                    if (wide)
+                        AnsiConsole.MarkupLine($"      [green]{Markup.Escape(change.After.FormatValues())}[/]");
                     break;
 
                 case ChangeType.Update when change.IsTtlOnlyChange:
                     AnsiConsole.MarkupLine(
                         $"  [yellow]~[/] {Markup.Escape(change.RecordName),-45} " +
                         $"[yellow]{change.RecordType,-6}[/] " +
-                        $"[dim]{change.Before!.Ttl}[/]→[yellow]{change.After!.Ttl}[/]  " +
-                        $"{Markup.Escape(Truncate(change.After.FormatValues()))}  [dim](ttl only)[/]");
+                        $"[dim]{change.Before!.Ttl}[/]→[yellow]{change.After!.Ttl}[/]" +
+                        (wide ? "  [dim](ttl only)[/]" : $"  {Markup.Escape(Truncate(change.After.FormatValues()))}  [dim](ttl only)[/]"));
+                    if (wide)
+                        AnsiConsole.MarkupLine($"      {Markup.Escape(change.After!.FormatValues())}");
                     break;
 
                 case ChangeType.Update:
                     AnsiConsole.MarkupLine(
                         $"  [yellow]~[/] {Markup.Escape(change.RecordName),-45} " +
                         $"[yellow]{change.RecordType,-6}[/] {change.After!.Ttl,5}");
-                    AnsiConsole.MarkupLine(
-                        $"    [dim]before:[/] {Markup.Escape(Truncate(change.Before!.FormatValues(), 120))}");
-                    AnsiConsole.MarkupLine(
-                        $"    [yellow]after: [/] {Markup.Escape(Truncate(change.After.FormatValues(), 120))}");
+                    if (wide)
+                    {
+                        AnsiConsole.MarkupLine($"      [dim]before:[/] {Markup.Escape(change.Before!.FormatValues())}");
+                        AnsiConsole.MarkupLine($"      [yellow]after: [/] {Markup.Escape(change.After.FormatValues())}");
+                    }
+                    else
+                    {
+                        AnsiConsole.MarkupLine($"    [dim]before:[/] {Markup.Escape(Truncate(change.Before!.FormatValues(), 120))}");
+                        AnsiConsole.MarkupLine($"    [yellow]after: [/] {Markup.Escape(Truncate(change.After.FormatValues(), 120))}");
+                    }
                     break;
 
                 case ChangeType.Delete:
                     AnsiConsole.MarkupLine(
                         $"  [red]-[/] {Markup.Escape(change.RecordName),-45} " +
-                        $"[red]{change.RecordType,-6}[/] {change.Before!.Ttl,5}  " +
-                        $"[dim]{Markup.Escape(Truncate(change.Before.FormatValues()))}[/]");
+                        $"[red]{change.RecordType,-6}[/] {change.Before!.Ttl,5}" +
+                        (wide ? "" : $"  [dim]{Markup.Escape(Truncate(change.Before.FormatValues()))}[/]"));
+                    if (wide)
+                        AnsiConsole.MarkupLine($"      [dim]{Markup.Escape(change.Before.FormatValues())}[/]");
                     break;
             }
         }

@@ -20,7 +20,7 @@ public class ApplyCommand(ILoggerFactory loggerFactory) : AsyncCommand<ApplySett
 
             var config = CommandHelpers.LoadAndValidateConfig(settings);
 
-            var useSpinners = !settings.GcpLogs;
+            var useSpinners = !settings.GcpLogs && !settings.Verbose;
 
             AnsiConsole.MarkupLine("\nRunning pre-flight checks...");
 
@@ -99,7 +99,7 @@ public class ApplyCommand(ILoggerFactory loggerFactory) : AsyncCommand<ApplySett
 
             // Print all plans
             foreach (var (zoneName, targetName, plan, _) in plans)
-                CommandHelpers.PrintPlan(plan, zoneName, targetName);
+                CommandHelpers.PrintPlan(plan, zoneName, targetName, settings.Wide);
 
             // Safety guard: abort if too many changes
             if (!settings.Force && totalChanges > settings.MaxChanges)

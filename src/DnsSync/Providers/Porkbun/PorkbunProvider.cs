@@ -407,10 +407,13 @@ public class PorkbunProvider : IProvider
     private async Task<string> PostAsync(string path, Dictionary<string, object> body, CancellationToken ct) =>
         await HttpRetryPolicy.ExecuteAsync(async () =>
         {
+            _logger.LogDebug("POST {Url}", BaseUrl + path);
             var json = JsonSerializer.Serialize(body, JsonOpts);
             var content = new StringContent(json, Encoding.UTF8, "application/json");
             var resp = await _http.PostAsync(BaseUrl + path, content, ct);
-            return await EnsureSuccessAsync(resp);
+            var responseBody = await EnsureSuccessAsync(resp);
+            _logger.LogDebug("← {StatusCode} ({Bytes} bytes)", (int)resp.StatusCode, responseBody.Length);
+            return responseBody;
         }, _logger, ct);
 
     private static async Task<string> EnsureSuccessAsync(HttpResponseMessage resp)
@@ -459,10 +462,14 @@ public class PorkbunProvider : IProvider
 
     private static string BuildFqdn(string name, string zoneName)
     {
-        if (string.IsNullOrEmpty(name) || name == zoneName.TrimEnd('.'))
+        var zone = zoneName.TrimEnd('.');
+        if (string.IsNullOrEmpty(name) || string.Equals(name, zone, StringComparison.OrdinalIgnoreCase))
             return zoneName;
         if (name.EndsWith('.'))
             return name.ToLowerInvariant();
+        // Porkbun returns full domain names (e.g. "www.example.com"), not just subdomains
+        if (name.EndsWith("." + zone, StringComparison.OrdinalIgnoreCase) || string.Equals(name, zone, StringComparison.OrdinalIgnoreCase))
+            return name.ToLowerInvariant() + ".";
         return $"{name.ToLowerInvariant()}.{zoneName}";
     }
 

@@ -47,6 +47,16 @@ public class PorkbunParsingTests
     }
 
     [Fact]
+    public void ParsePorkbunRecord_FullSubdomainName_NotDoubleAppended()
+    {
+        // Porkbun returns full domain names like "www.example.com", not just "www"
+        var el = MakeRecord("A", "www.example.com", "1.2.3.4");
+        var record = PorkbunProvider.ParsePorkbunRecord(el, Zone) as ARecord;
+        record.ShouldNotBeNull();
+        record.Name.ShouldBe("www.example.com.");
+    }
+
+    [Fact]
     public void ParsePorkbunRecord_AaaaRecord_ParsedCorrectly()
     {
         var el = MakeRecord("AAAA", "ipv6", "2001:db8::1");

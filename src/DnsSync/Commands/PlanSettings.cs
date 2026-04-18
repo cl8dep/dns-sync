@@ -5,6 +5,10 @@ namespace DnsSync.Commands;
 
 public class PlanSettings : BaseSettings
 {
+    [CommandOption("--wide")]
+    [Description("Show record values on a second line (no truncation)")]
+    public bool Wide { get; set; }
+
     [CommandOption("--include-apex-ns")]
     [Description("Include apex NS records in the diff (excluded by default to prevent registrar conflicts)")]
     public bool IncludeApexNs { get; set; }

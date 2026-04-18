@@ -12,7 +12,7 @@ public class PlanCommand(ILoggerFactory loggerFactory) : AsyncCommand<PlanSettin
     protected override async Task<int> ExecuteAsync(CommandContext context, PlanSettings settings, CancellationToken cancellationToken)
     {
         var jsonMode = string.Equals(settings.Output, "json", StringComparison.OrdinalIgnoreCase);
-        var useSpinners = !jsonMode && !settings.GcpLogs;
+        var useSpinners = !jsonMode && !settings.GcpLogs && !settings.Verbose;
 
         try
         {
@@ -99,7 +99,7 @@ public class PlanCommand(ILoggerFactory loggerFactory) : AsyncCommand<PlanSettin
                         }
                         else
                         {
-                            CommandHelpers.PrintPlan(plan, zoneName, targetName);
+                            CommandHelpers.PrintPlan(plan, zoneName, targetName, settings.Wide);
                         }
 
                         totalChanges += plan.Total;

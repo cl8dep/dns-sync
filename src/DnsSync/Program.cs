@@ -69,6 +69,14 @@ if (gcpLogs)
         Out = new AnsiConsoleOutput(TextWriter.Null)
     });
 }
+else if (verbose)
+{
+    // In verbose mode, emit structured debug logs to stderr so they don't
+    // interleave with AnsiConsole's stdout output.
+    logConfig.WriteTo.Console(
+        outputTemplate: "[{Level:u3}] {Message:lj}{NewLine}{Exception}",
+        standardErrorFromLevel: LogEventLevel.Verbose);
+}
 
 if (logFile is not null)
     logConfig.WriteTo.File(
