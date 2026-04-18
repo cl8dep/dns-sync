@@ -307,37 +307,49 @@ public class GcpCloudDnsProvider : IProvider, IDisposable
 
             "CNAME" => new CnameRecord
             {
-                Name = fqdn, Type = "CNAME", Ttl = ttl,
+                Name = fqdn,
+                Type = "CNAME",
+                Ttl = ttl,
                 Target = NormalizeFqdn(values[0])
             },
 
             "MX" => new MxRecord
             {
-                Name = fqdn, Type = "MX", Ttl = ttl,
+                Name = fqdn,
+                Type = "MX",
+                Ttl = ttl,
                 Values = values.Select(ParseMxRrdata).ToList()
             },
 
             "TXT" => new TxtRecord
             {
-                Name = fqdn, Type = "TXT", Ttl = ttl,
+                Name = fqdn,
+                Type = "TXT",
+                Ttl = ttl,
                 Values = values.Select(UnquoteTxt).ToList()
             },
 
             "NS" => new NsRecord
             {
-                Name = fqdn, Type = "NS", Ttl = ttl,
+                Name = fqdn,
+                Type = "NS",
+                Ttl = ttl,
                 Nameservers = values.Select(NormalizeFqdn).ToList()
             },
 
             "CAA" => new CaaRecord
             {
-                Name = fqdn, Type = "CAA", Ttl = ttl,
+                Name = fqdn,
+                Type = "CAA",
+                Ttl = ttl,
                 Values = values.Select(ParseCaaRrdata).ToList()
             },
 
             "SRV" => new SrvRecord
             {
-                Name = fqdn, Type = "SRV", Ttl = ttl,
+                Name = fqdn,
+                Type = "SRV",
+                Ttl = ttl,
                 Values = values.Select(ParseSrvRrdata).ToList()
             },
 

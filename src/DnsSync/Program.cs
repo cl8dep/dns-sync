@@ -115,14 +115,14 @@ app.Configure(config =>
     config.Settings.HelpProviderStyles = new HelpProviderStyle
     {
         Description = defaultStyles.Description,
-        Usage       = defaultStyles.Usage,
-        Examples    = defaultStyles.Examples,
-        Arguments   = defaultStyles.Arguments,
-        Options     = defaultStyles.Options,
-        Commands    = new CommandStyle
+        Usage = defaultStyles.Usage,
+        Examples = defaultStyles.Examples,
+        Arguments = defaultStyles.Arguments,
+        Options = defaultStyles.Options,
+        Commands = new CommandStyle
         {
-            Header           = new Style(Color.White, decoration: Decoration.Bold),
-            ChildCommand     = new Style(Color.White),
+            Header = new Style(Color.White, decoration: Decoration.Bold),
+            ChildCommand = new Style(Color.White),
             RequiredArgument = defaultStyles.Commands?.RequiredArgument,
         },
     };

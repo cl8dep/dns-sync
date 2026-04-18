@@ -15,7 +15,9 @@ public class ZoneValidatorTests
     {
         var zone = ZoneWith(new ARecord
         {
-            Name = "www.example.com.", Type = "A", Ttl = 300,
+            Name = "www.example.com.",
+            Type = "A",
+            Ttl = 300,
             Addresses = ["1.2.3.4"]
         });
 
@@ -30,7 +32,9 @@ public class ZoneValidatorTests
     {
         var zone = ZoneWith(new ARecord
         {
-            Name = "www.example.com.", Type = "A", Ttl = -1,
+            Name = "www.example.com.",
+            Type = "A",
+            Ttl = -1,
             Addresses = ["1.2.3.4"]
         });
 
@@ -45,7 +49,9 @@ public class ZoneValidatorTests
     {
         var zone = ZoneWith(new ARecord
         {
-            Name = "www.example.com.", Type = "A", Ttl = 1,
+            Name = "www.example.com.",
+            Type = "A",
+            Ttl = 1,
             Addresses = ["1.2.3.4"]
         });
 
@@ -74,7 +80,9 @@ public class ZoneValidatorTests
     {
         var zone = ZoneWith(new ARecord
         {
-            Name = "www.example.com.", Type = "A", Ttl = 300,
+            Name = "www.example.com.",
+            Type = "A",
+            Ttl = 300,
             Addresses = []
         });
 
@@ -89,7 +97,9 @@ public class ZoneValidatorTests
     {
         var zone = ZoneWith(new MxRecord
         {
-            Name = "example.com.", Type = "MX", Ttl = 600,
+            Name = "example.com.",
+            Type = "MX",
+            Ttl = 600,
             Values = []
         });
 
@@ -122,7 +132,9 @@ public class ZoneValidatorTests
     {
         var zone = ZoneWith(new ARecord
         {
-            Name = "www.example.com.", Type = "A", Ttl = 300,
+            Name = "www.example.com.",
+            Type = "A",
+            Ttl = 300,
             Addresses = ["not-an-ip"]
         });
 
@@ -137,7 +149,9 @@ public class ZoneValidatorTests
     {
         var zone = ZoneWith(new AaaaRecord
         {
-            Name = "www.example.com.", Type = "AAAA", Ttl = 300,
+            Name = "www.example.com.",
+            Type = "AAAA",
+            Ttl = 300,
             Addresses = ["192.168.1.1"]  // IPv4 address in AAAA record
         });
 
@@ -152,7 +166,9 @@ public class ZoneValidatorTests
     {
         var zone = ZoneWith(new CnameRecord
         {
-            Name = "www.example.com.", Type = "CNAME", Ttl = 300,
+            Name = "www.example.com.",
+            Type = "CNAME",
+            Ttl = 300,
             Target = "not a valid hostname!!"
         });
 
@@ -167,7 +183,9 @@ public class ZoneValidatorTests
     {
         var zone = ZoneWith(new AaaaRecord
         {
-            Name = "www.example.com.", Type = "AAAA", Ttl = 300,
+            Name = "www.example.com.",
+            Type = "AAAA",
+            Ttl = 300,
             Addresses = ["2001:db8::1"]
         });
 
@@ -181,7 +199,9 @@ public class ZoneValidatorTests
     {
         var zone = ZoneWith(new SrvRecord
         {
-            Name = "_sip._tcp.example.com.", Type = "SRV", Ttl = 300,
+            Name = "_sip._tcp.example.com.",
+            Type = "SRV",
+            Ttl = 300,
             Values = [new SrvValue(10, 20, 99999, "sip.example.com.")]
         });
 
@@ -196,7 +216,9 @@ public class ZoneValidatorTests
     {
         var zone = ZoneWith(new SrvRecord
         {
-            Name = "_sip._tcp.example.com.", Type = "SRV", Ttl = 300,
+            Name = "_sip._tcp.example.com.",
+            Type = "SRV",
+            Ttl = 300,
             Values = [new SrvValue(10, 20, 0, "sip.example.com.")]
         });
 
@@ -210,7 +232,9 @@ public class ZoneValidatorTests
     {
         var zone = ZoneWith(new MxRecord
         {
-            Name = "example.com.", Type = "MX", Ttl = 300,
+            Name = "example.com.",
+            Type = "MX",
+            Ttl = 300,
             Values = []
         });
 
@@ -225,7 +249,9 @@ public class ZoneValidatorTests
     {
         var zone = ZoneWith(new NsRecord
         {
-            Name = "example.com.", Type = "NS", Ttl = 300,
+            Name = "example.com.",
+            Type = "NS",
+            Ttl = 300,
             Nameservers = []
         });
 
@@ -240,7 +266,9 @@ public class ZoneValidatorTests
     {
         var zone = ZoneWith(new CaaRecord
         {
-            Name = "example.com.", Type = "CAA", Ttl = 300,
+            Name = "example.com.",
+            Type = "CAA",
+            Ttl = 300,
             Values = []
         });
 
@@ -255,7 +283,9 @@ public class ZoneValidatorTests
     {
         var zone = ZoneWith(new SrvRecord
         {
-            Name = "_sip._tcp.example.com.", Type = "SRV", Ttl = 300,
+            Name = "_sip._tcp.example.com.",
+            Type = "SRV",
+            Ttl = 300,
             Values = [new SrvValue(10, 20, -1, "sip.example.com.")]
         });
 

@@ -1,10 +1,10 @@
 using DnsSync.Core;
 using DnsSync.Core.Records;
-using static DnsSync.Core.DnsNameHelper;
 using YamlDotNet.Core;
 using YamlDotNet.Core.Events;
 using YamlDotNet.Serialization;
 using YamlDotNet.Serialization.NamingConventions;
+using static DnsSync.Core.DnsNameHelper;
 
 namespace DnsSync.Providers.Yaml;
 
@@ -135,42 +135,58 @@ public class YamlProvider(string directory) : IProvider
         {
             "A" => new ARecord
             {
-                Name = fqdn, Type = "A", Ttl = ttl,
+                Name = fqdn,
+                Type = "A",
+                Ttl = ttl,
                 Addresses = GetStringList(def, "values", "value")
             },
             "AAAA" => new AaaaRecord
             {
-                Name = fqdn, Type = "AAAA", Ttl = ttl,
+                Name = fqdn,
+                Type = "AAAA",
+                Ttl = ttl,
                 Addresses = GetStringList(def, "values", "value")
             },
             "CNAME" => new CnameRecord
             {
-                Name = fqdn, Type = "CNAME", Ttl = ttl,
+                Name = fqdn,
+                Type = "CNAME",
+                Ttl = ttl,
                 Target = NormalizeFqdn(GetString(def, "value") ?? GetString(def, "target") ?? "")
             },
             "MX" => new MxRecord
             {
-                Name = fqdn, Type = "MX", Ttl = ttl,
+                Name = fqdn,
+                Type = "MX",
+                Ttl = ttl,
                 Values = GetMxValues(def)
             },
             "TXT" => new TxtRecord
             {
-                Name = fqdn, Type = "TXT", Ttl = ttl,
+                Name = fqdn,
+                Type = "TXT",
+                Ttl = ttl,
                 Values = GetStringList(def, "values", "value")
             },
             "NS" => new NsRecord
             {
-                Name = fqdn, Type = "NS", Ttl = ttl,
+                Name = fqdn,
+                Type = "NS",
+                Ttl = ttl,
                 Nameservers = GetStringList(def, "values", "value").Select(NormalizeFqdn).ToList()
             },
             "CAA" => new CaaRecord
             {
-                Name = fqdn, Type = "CAA", Ttl = ttl,
+                Name = fqdn,
+                Type = "CAA",
+                Ttl = ttl,
                 Values = GetCaaValues(def)
             },
             "SRV" => new SrvRecord
             {
-                Name = fqdn, Type = "SRV", Ttl = ttl,
+                Name = fqdn,
+                Type = "SRV",
+                Ttl = ttl,
                 Values = GetSrvValues(def)
             },
             _ => null  // unknown type, skip

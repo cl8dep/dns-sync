@@ -238,25 +238,33 @@ public class PorkbunProvider : IProvider
 
             "CNAME" or "ALIAS" => new CnameRecord
             {
-                Name = name, Type = "CNAME", Ttl = ttl,
+                Name = name,
+                Type = "CNAME",
+                Ttl = ttl,
                 Target = NormalizeFqdn(content)
             },
 
             "MX" => new MxRecord
             {
-                Name = name, Type = "MX", Ttl = ttl,
+                Name = name,
+                Type = "MX",
+                Ttl = ttl,
                 Values = [new MxValue(prio, NormalizeFqdn(content))]
             },
 
             "TXT" => new TxtRecord
             {
-                Name = name, Type = "TXT", Ttl = ttl,
+                Name = name,
+                Type = "TXT",
+                Ttl = ttl,
                 Values = [content.Trim('"')]
             },
 
             "NS" => new NsRecord
             {
-                Name = name, Type = "NS", Ttl = ttl,
+                Name = name,
+                Type = "NS",
+                Ttl = ttl,
                 Nameservers = [NormalizeFqdn(content)]
             },
 
@@ -275,7 +283,9 @@ public class PorkbunProvider : IProvider
         if (parts.Length < 3) return null;
         return new CaaRecord
         {
-            Name = name, Type = "CAA", Ttl = ttl,
+            Name = name,
+            Type = "CAA",
+            Ttl = ttl,
             Values = [new CaaValue(
                 int.TryParse(parts[0], out var flags) ? flags : 0,
                 parts[1],
@@ -289,7 +299,9 @@ public class PorkbunProvider : IProvider
         var parts = content.Split(' ', 3);
         return new SrvRecord
         {
-            Name = name, Type = "SRV", Ttl = ttl,
+            Name = name,
+            Type = "SRV",
+            Ttl = ttl,
             Values = [new SrvValue(
                 prio,
                 int.TryParse(parts.ElementAtOrDefault(0), out var w) ? w : 0,
@@ -308,39 +320,44 @@ public class PorkbunProvider : IProvider
         return record switch
         {
             ARecord a => a.Addresses.Select(addr => new Dictionary<string, object>
-                { ["type"] = "A", ["name"] = subdomain, ["content"] = addr, ["ttl"] = ttl }).ToList(),
+            { ["type"] = "A", ["name"] = subdomain, ["content"] = addr, ["ttl"] = ttl }).ToList(),
 
             AaaaRecord aaaa => aaaa.Addresses.Select(addr => new Dictionary<string, object>
-                { ["type"] = "AAAA", ["name"] = subdomain, ["content"] = addr, ["ttl"] = ttl }).ToList(),
+            { ["type"] = "AAAA", ["name"] = subdomain, ["content"] = addr, ["ttl"] = ttl }).ToList(),
 
             CnameRecord cname => [new Dictionary<string, object>
                 { ["type"] = "CNAME", ["name"] = subdomain, ["content"] = cname.Target.TrimEnd('.'), ["ttl"] = ttl }],
 
             MxRecord mx => mx.Values.Select(v => new Dictionary<string, object>
             {
-                ["type"] = "MX", ["name"] = subdomain,
+                ["type"] = "MX",
+                ["name"] = subdomain,
                 ["content"] = v.Exchange.TrimEnd('.'),
-                ["prio"] = v.Preference, ["ttl"] = ttl
+                ["prio"] = v.Preference,
+                ["ttl"] = ttl
             }).ToList(),
 
             TxtRecord txt => txt.Values.Select(v => new Dictionary<string, object>
-                { ["type"] = "TXT", ["name"] = subdomain, ["content"] = v, ["ttl"] = ttl }).ToList(),
+            { ["type"] = "TXT", ["name"] = subdomain, ["content"] = v, ["ttl"] = ttl }).ToList(),
 
             NsRecord ns => ns.Nameservers.Select(n => new Dictionary<string, object>
-                { ["type"] = "NS", ["name"] = subdomain, ["content"] = n.TrimEnd('.'), ["ttl"] = ttl }).ToList(),
+            { ["type"] = "NS", ["name"] = subdomain, ["content"] = n.TrimEnd('.'), ["ttl"] = ttl }).ToList(),
 
             CaaRecord caa => caa.Values.Select(v => new Dictionary<string, object>
             {
-                ["type"] = "CAA", ["name"] = subdomain,
+                ["type"] = "CAA",
+                ["name"] = subdomain,
                 ["content"] = $"{v.Flags} {v.Tag} \"{v.Value}\"",
                 ["ttl"] = ttl
             }).ToList(),
 
             SrvRecord srv => srv.Values.Select(v => new Dictionary<string, object>
             {
-                ["type"] = "SRV", ["name"] = subdomain,
+                ["type"] = "SRV",
+                ["name"] = subdomain,
                 ["content"] = $"{v.Weight} {v.Port} {v.Target.TrimEnd('.')}",
-                ["prio"] = v.Priority, ["ttl"] = ttl
+                ["prio"] = v.Priority,
+                ["ttl"] = ttl
             }).ToList(),
 
             _ => []
@@ -362,37 +379,51 @@ public class PorkbunProvider : IProvider
             {
                 ARecord => new ARecord
                 {
-                    Name = first.Name, Type = first.Type, Ttl = first.Ttl,
+                    Name = first.Name,
+                    Type = first.Type,
+                    Ttl = first.Ttl,
                     Addresses = records.Cast<ARecord>().SelectMany(r => r.Addresses).ToList()
                 },
                 AaaaRecord => new AaaaRecord
                 {
-                    Name = first.Name, Type = first.Type, Ttl = first.Ttl,
+                    Name = first.Name,
+                    Type = first.Type,
+                    Ttl = first.Ttl,
                     Addresses = records.Cast<AaaaRecord>().SelectMany(r => r.Addresses).ToList()
                 },
                 MxRecord => new MxRecord
                 {
-                    Name = first.Name, Type = first.Type, Ttl = first.Ttl,
+                    Name = first.Name,
+                    Type = first.Type,
+                    Ttl = first.Ttl,
                     Values = records.Cast<MxRecord>().SelectMany(r => r.Values).ToList()
                 },
                 TxtRecord => new TxtRecord
                 {
-                    Name = first.Name, Type = first.Type, Ttl = first.Ttl,
+                    Name = first.Name,
+                    Type = first.Type,
+                    Ttl = first.Ttl,
                     Values = records.Cast<TxtRecord>().SelectMany(r => r.Values).ToList()
                 },
                 NsRecord => new NsRecord
                 {
-                    Name = first.Name, Type = first.Type, Ttl = first.Ttl,
+                    Name = first.Name,
+                    Type = first.Type,
+                    Ttl = first.Ttl,
                     Nameservers = records.Cast<NsRecord>().SelectMany(r => r.Nameservers).ToList()
                 },
                 CaaRecord => new CaaRecord
                 {
-                    Name = first.Name, Type = first.Type, Ttl = first.Ttl,
+                    Name = first.Name,
+                    Type = first.Type,
+                    Ttl = first.Ttl,
                     Values = records.Cast<CaaRecord>().SelectMany(r => r.Values).ToList()
                 },
                 SrvRecord => new SrvRecord
                 {
-                    Name = first.Name, Type = first.Type, Ttl = first.Ttl,
+                    Name = first.Name,
+                    Type = first.Type,
+                    Ttl = first.Ttl,
                     Values = records.Cast<SrvRecord>().SelectMany(r => r.Values).ToList()
                 },
                 _ => first

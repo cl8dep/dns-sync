@@ -252,37 +252,51 @@ public class CloudflareProvider : IProvider
             {
                 ARecord => new ARecord
                 {
-                    Name = first.Name, Type = first.Type, Ttl = first.Ttl,
+                    Name = first.Name,
+                    Type = first.Type,
+                    Ttl = first.Ttl,
                     Addresses = records.Cast<ARecord>().SelectMany(r => r.Addresses).ToList()
                 },
                 AaaaRecord => new AaaaRecord
                 {
-                    Name = first.Name, Type = first.Type, Ttl = first.Ttl,
+                    Name = first.Name,
+                    Type = first.Type,
+                    Ttl = first.Ttl,
                     Addresses = records.Cast<AaaaRecord>().SelectMany(r => r.Addresses).ToList()
                 },
                 MxRecord => new MxRecord
                 {
-                    Name = first.Name, Type = first.Type, Ttl = first.Ttl,
+                    Name = first.Name,
+                    Type = first.Type,
+                    Ttl = first.Ttl,
                     Values = records.Cast<MxRecord>().SelectMany(r => r.Values).ToList()
                 },
                 TxtRecord => new TxtRecord
                 {
-                    Name = first.Name, Type = first.Type, Ttl = first.Ttl,
+                    Name = first.Name,
+                    Type = first.Type,
+                    Ttl = first.Ttl,
                     Values = records.Cast<TxtRecord>().SelectMany(r => r.Values).ToList()
                 },
                 NsRecord => new NsRecord
                 {
-                    Name = first.Name, Type = first.Type, Ttl = first.Ttl,
+                    Name = first.Name,
+                    Type = first.Type,
+                    Ttl = first.Ttl,
                     Nameservers = records.Cast<NsRecord>().SelectMany(r => r.Nameservers).ToList()
                 },
                 CaaRecord => new CaaRecord
                 {
-                    Name = first.Name, Type = first.Type, Ttl = first.Ttl,
+                    Name = first.Name,
+                    Type = first.Type,
+                    Ttl = first.Ttl,
                     Values = records.Cast<CaaRecord>().SelectMany(r => r.Values).ToList()
                 },
                 SrvRecord => new SrvRecord
                 {
-                    Name = first.Name, Type = first.Type, Ttl = first.Ttl,
+                    Name = first.Name,
+                    Type = first.Type,
+                    Ttl = first.Ttl,
                     Values = records.Cast<SrvRecord>().SelectMany(r => r.Values).ToList()
                 },
                 _ => first
@@ -346,22 +360,30 @@ public class CloudflareProvider : IProvider
         {
             "A" => new ARecord
             {
-                Name = name, Type = "A", Ttl = ttl,
+                Name = name,
+                Type = "A",
+                Ttl = ttl,
                 Addresses = [r.GetProperty("content").GetString()!]
             },
             "AAAA" => new AaaaRecord
             {
-                Name = name, Type = "AAAA", Ttl = ttl,
+                Name = name,
+                Type = "AAAA",
+                Ttl = ttl,
                 Addresses = [r.GetProperty("content").GetString()!]
             },
             "CNAME" => new CnameRecord
             {
-                Name = name, Type = "CNAME", Ttl = ttl,
+                Name = name,
+                Type = "CNAME",
+                Ttl = ttl,
                 Target = DnsNameHelper.NormalizeFqdn(r.GetProperty("content").GetString()!)
             },
             "MX" => new MxRecord
             {
-                Name = name, Type = "MX", Ttl = ttl,
+                Name = name,
+                Type = "MX",
+                Ttl = ttl,
                 Values =
                 [
                     new MxValue(
@@ -371,12 +393,16 @@ public class CloudflareProvider : IProvider
             },
             "TXT" => new TxtRecord
             {
-                Name = name, Type = "TXT", Ttl = ttl,
+                Name = name,
+                Type = "TXT",
+                Ttl = ttl,
                 Values = [StripTxtQuotes(r.GetProperty("content").GetString()!)]
             },
             "NS" => new NsRecord
             {
-                Name = name, Type = "NS", Ttl = ttl,
+                Name = name,
+                Type = "NS",
+                Ttl = ttl,
                 Nameservers = [DnsNameHelper.NormalizeFqdn(r.GetProperty("content").GetString()!)]
             },
             "SRV" => ParseSrvFromCloudflare(name, ttl, r),
@@ -393,7 +419,9 @@ public class CloudflareProvider : IProvider
 
         return new CaaRecord
         {
-            Name = name, Type = "CAA", Ttl = ttl,
+            Name = name,
+            Type = "CAA",
+            Ttl = ttl,
             Values =
             [
                 new CaaValue(
@@ -411,7 +439,9 @@ public class CloudflareProvider : IProvider
 
         return new SrvRecord
         {
-            Name = name, Type = "SRV", Ttl = ttl,
+            Name = name,
+            Type = "SRV",
+            Ttl = ttl,
             Values =
             [
                 new SrvValue(
@@ -475,37 +505,43 @@ public class CloudflareProvider : IProvider
         return record switch
         {
             ARecord a => a.Addresses.Select(addr => new Dictionary<string, object>
-                { ["type"] = "A", ["name"] = name, ["content"] = addr, ["ttl"] = ttl }).ToList(),
+            { ["type"] = "A", ["name"] = name, ["content"] = addr, ["ttl"] = ttl }).ToList(),
 
             AaaaRecord aaaa => aaaa.Addresses.Select(addr => new Dictionary<string, object>
-                { ["type"] = "AAAA", ["name"] = name, ["content"] = addr, ["ttl"] = ttl }).ToList(),
+            { ["type"] = "AAAA", ["name"] = name, ["content"] = addr, ["ttl"] = ttl }).ToList(),
 
             CnameRecord cname => [new Dictionary<string, object>
                 { ["type"] = "CNAME", ["name"] = name, ["content"] = cname.Target.TrimEnd('.'), ["ttl"] = ttl }],
 
             MxRecord mx => mx.Values.Select(v => new Dictionary<string, object>
             {
-                ["type"] = "MX", ["name"] = name,
+                ["type"] = "MX",
+                ["name"] = name,
                 ["content"] = v.Exchange.TrimEnd('.'),
-                ["priority"] = v.Preference, ["ttl"] = ttl
+                ["priority"] = v.Preference,
+                ["ttl"] = ttl
             }).ToList(),
 
             TxtRecord txt => txt.Values.Select(v => new Dictionary<string, object>
-                { ["type"] = "TXT", ["name"] = name, ["content"] = v, ["ttl"] = ttl }).ToList(),
+            { ["type"] = "TXT", ["name"] = name, ["content"] = v, ["ttl"] = ttl }).ToList(),
 
             NsRecord ns => ns.Nameservers.Select(n => new Dictionary<string, object>
-                { ["type"] = "NS", ["name"] = name, ["content"] = n.TrimEnd('.'), ["ttl"] = ttl }).ToList(),
+            { ["type"] = "NS", ["name"] = name, ["content"] = n.TrimEnd('.'), ["ttl"] = ttl }).ToList(),
 
             CaaRecord caa => caa.Values.Select(v => new Dictionary<string, object>
-                { ["type"] = "CAA", ["name"] = name, ["content"] = $"{v.Flags} {v.Tag} \"{v.Value}\"", ["ttl"] = ttl }).ToList(),
+            { ["type"] = "CAA", ["name"] = name, ["content"] = $"{v.Flags} {v.Tag} \"{v.Value}\"", ["ttl"] = ttl }).ToList(),
 
             SrvRecord srv => srv.Values.Select(v => new Dictionary<string, object>
             {
-                ["type"] = "SRV", ["name"] = name, ["ttl"] = ttl,
+                ["type"] = "SRV",
+                ["name"] = name,
+                ["ttl"] = ttl,
                 ["data"] = new Dictionary<string, object>
                 {
-                    ["priority"] = v.Priority, ["weight"] = v.Weight,
-                    ["port"] = v.Port, ["target"] = v.Target.TrimEnd('.')
+                    ["priority"] = v.Priority,
+                    ["weight"] = v.Weight,
+                    ["port"] = v.Port,
+                    ["target"] = v.Target.TrimEnd('.')
                 }
             }).ToList(),
 

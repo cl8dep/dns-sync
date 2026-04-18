@@ -101,7 +101,9 @@ public class DiffEngineTests
         var source = ZoneWith("example.com.",
             new NsRecord
             {
-                Name = "example.com.", Type = "NS", Ttl = 3600,
+                Name = "example.com.",
+                Type = "NS",
+                Ttl = 3600,
                 Nameservers = ["ns1.example.com.", "ns2.example.com."]
             });
         var target = EmptyZone("example.com.");
@@ -117,7 +119,9 @@ public class DiffEngineTests
         var source = ZoneWith("example.com.",
             new NsRecord
             {
-                Name = "example.com.", Type = "NS", Ttl = 3600,
+                Name = "example.com.",
+                Type = "NS",
+                Ttl = 3600,
                 Nameservers = ["ns1.example.com.", "ns2.example.com."]
             });
         var target = EmptyZone("example.com.");
@@ -133,7 +137,9 @@ public class DiffEngineTests
         var source = ZoneWith("example.com.",
             new NsRecord
             {
-                Name = "sub.example.com.", Type = "NS", Ttl = 3600,
+                Name = "sub.example.com.",
+                Type = "NS",
+                Ttl = 3600,
                 Nameservers = ["ns1.sub.example.com."]
             });
         var target = EmptyZone("example.com.");

@@ -39,13 +39,16 @@ public static class HttpRetryPolicy
 
     public static bool IsTransient(Exception ex) => ex switch
     {
-        HttpRequestException { StatusCode:
+        HttpRequestException
+        {
+            StatusCode:
             HttpStatusCode.TooManyRequests or
             HttpStatusCode.RequestTimeout or
             HttpStatusCode.InternalServerError or
             HttpStatusCode.BadGateway or
             HttpStatusCode.ServiceUnavailable or
-            HttpStatusCode.GatewayTimeout } => true,
+            HttpStatusCode.GatewayTimeout
+        } => true,
         TaskCanceledException tce when !tce.CancellationToken.IsCancellationRequested => true,
         _ => false
     };

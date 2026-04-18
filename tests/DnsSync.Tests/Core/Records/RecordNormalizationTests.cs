@@ -37,12 +37,16 @@ public class RecordNormalizationTests
     {
         var r1 = new MxRecord
         {
-            Name = "x.", Type = "MX", Ttl = 300,
+            Name = "x.",
+            Type = "MX",
+            Ttl = 300,
             Values = [new MxValue(10, "mx1.example.com."), new MxValue(20, "mx2.example.com.")]
         };
         var r2 = new MxRecord
         {
-            Name = "x.", Type = "MX", Ttl = 300,
+            Name = "x.",
+            Type = "MX",
+            Ttl = 300,
             Values = [new MxValue(20, "mx2.example.com."), new MxValue(10, "mx1.example.com.")]
         };
 
@@ -54,12 +58,16 @@ public class RecordNormalizationTests
     {
         var withDot = new MxRecord
         {
-            Name = "x.", Type = "MX", Ttl = 300,
+            Name = "x.",
+            Type = "MX",
+            Ttl = 300,
             Values = [new MxValue(10, "mx1.example.com.")]
         };
         var withoutDot = new MxRecord
         {
-            Name = "x.", Type = "MX", Ttl = 300,
+            Name = "x.",
+            Type = "MX",
+            Ttl = 300,
             Values = [new MxValue(10, "mx1.example.com")]
         };
 
@@ -71,12 +79,16 @@ public class RecordNormalizationTests
     {
         var r1 = new TxtRecord
         {
-            Name = "x.", Type = "TXT", Ttl = 300,
+            Name = "x.",
+            Type = "TXT",
+            Ttl = 300,
             Values = ["v=spf1 include:_spf.google.com ~all", "google-site-verification=abc"]
         };
         var r2 = new TxtRecord
         {
-            Name = "x.", Type = "TXT", Ttl = 300,
+            Name = "x.",
+            Type = "TXT",
+            Ttl = 300,
             Values = ["google-site-verification=abc", "v=spf1 include:_spf.google.com ~all"]
         };
 
@@ -88,12 +100,16 @@ public class RecordNormalizationTests
     {
         var withDot = new NsRecord
         {
-            Name = "x.", Type = "NS", Ttl = 3600,
+            Name = "x.",
+            Type = "NS",
+            Ttl = 3600,
             Nameservers = ["ns1.example.com.", "ns2.example.com."]
         };
         var withoutDot = new NsRecord
         {
-            Name = "x.", Type = "NS", Ttl = 3600,
+            Name = "x.",
+            Type = "NS",
+            Ttl = 3600,
             Nameservers = ["ns1.example.com", "ns2.example.com"]
         };
 
@@ -105,12 +121,16 @@ public class RecordNormalizationTests
     {
         var r1 = new CaaRecord
         {
-            Name = "x.", Type = "CAA", Ttl = 3600,
+            Name = "x.",
+            Type = "CAA",
+            Ttl = 3600,
             Values = [new CaaValue(0, "issue", "letsencrypt.org"), new CaaValue(0, "issuewild", ";")]
         };
         var r2 = new CaaRecord
         {
-            Name = "x.", Type = "CAA", Ttl = 3600,
+            Name = "x.",
+            Type = "CAA",
+            Ttl = 3600,
             Values = [new CaaValue(0, "issuewild", ";"), new CaaValue(0, "issue", "letsencrypt.org")]
         };
 

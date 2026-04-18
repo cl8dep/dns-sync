@@ -17,7 +17,7 @@ public class PlanSettings : BaseSettings
     [Description("Return exit code 2 when there are pending changes (Terraform-compatible)")]
     public bool ExitCode { get; set; }
 
-[CommandOption("--output <FORMAT>")]
+    [CommandOption("--output <FORMAT>")]
     [Description("Output format: text (default) or json")]
     [DefaultValue("text")]
     public string Output { get; set; } = "text";
