@@ -27,6 +27,13 @@ public class ProviderConfig
     [YamlMember(Alias = "account_id")]
     public string? AccountId { get; set; }
 
+    // porkbun provider
+    [YamlMember(Alias = "api_key")]
+    public string? ApiKey { get; set; }
+
+    [YamlMember(Alias = "secret_key")]
+    public string? SecretKey { get; set; }
+
     // route53 (future)
     [YamlMember(Alias = "access_key_id")]
     public string? AccessKeyId { get; set; }

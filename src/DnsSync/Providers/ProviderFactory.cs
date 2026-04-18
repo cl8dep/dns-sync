@@ -1,6 +1,7 @@
 using DnsSync.Config;
 using DnsSync.Providers.Cloudflare;
 using DnsSync.Providers.Gcp;
+using DnsSync.Providers.Porkbun;
 using DnsSync.Providers.Yaml;
 using Microsoft.Extensions.Logging;
 
@@ -28,9 +29,16 @@ public static class ProviderFactory
                 config.Private,
                 loggerFactory.CreateLogger<GcpCloudDnsProvider>()),
 
+            "porkbun" => new PorkbunProvider(
+                config.ApiKey ?? throw new InvalidOperationException(
+                    $"Provider '{name}' (porkbun) requires 'api_key'."),
+                config.SecretKey ?? throw new InvalidOperationException(
+                    $"Provider '{name}' (porkbun) requires 'secret_key'."),
+                loggerFactory.CreateLogger<PorkbunProvider>()),
+
             _ => throw new NotSupportedException(
                 $"Provider type '{config.Type}' is not supported in this build. " +
-                "Supported types: yaml, cloudflare, gcp_cloud_dns")
+                "Supported types: yaml, cloudflare, gcp_cloud_dns, porkbun")
         };
     }
 }

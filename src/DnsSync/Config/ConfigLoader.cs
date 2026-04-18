@@ -9,7 +9,7 @@ public static class ConfigLoader
     private static readonly Regex EnvVarPattern = new(@"\$\{([^}]+)\}", RegexOptions.Compiled);
 
     private static readonly HashSet<string> KnownProviderTypes =
-        new(StringComparer.OrdinalIgnoreCase) { "yaml", "cloudflare", "gcp_cloud_dns" };
+        new(StringComparer.OrdinalIgnoreCase) { "yaml", "cloudflare", "gcp_cloud_dns", "porkbun" };
 
     public static DnsSyncConfig Load(string path)
     {
@@ -98,6 +98,13 @@ public static class ConfigLoader
                 case "gcp_cloud_dns":
                     // project is optional — can come from credentials file or env vars at runtime
                     // credentials_file is optional — falls back to GOOGLE_APPLICATION_CREDENTIALS or ADC
+                    break;
+
+                case "porkbun":
+                    if (string.IsNullOrWhiteSpace(provider.ApiKey))
+                        errors.Add($"Provider '{name}' (porkbun) requires 'api_key'.");
+                    if (string.IsNullOrWhiteSpace(provider.SecretKey))
+                        errors.Add($"Provider '{name}' (porkbun) requires 'secret_key'.");
                     break;
             }
         }
