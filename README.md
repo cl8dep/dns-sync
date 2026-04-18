@@ -19,19 +19,6 @@ It works like Terraform for DNS: `plan` shows what would change, `apply` makes i
 
 ---
 
-## Features
-
-- Single self-contained binary — no Python, no Node, no runtime
-- Color-coded plan with before/after diffs
-- Pre-flight credential checks before touching any DNS
-- Safety limit: aborts if plan exceeds N changes (`--max-changes`)
-- `--exit-code` flag for CI/CD pipelines (returns `2` when changes pending)
-- JSON output mode for scripting
-- Structured logging for GCP Cloud Logging (auto-detected in Cloud Run)
-- `.env` file support for local development
-
----
-
 ## Supported providers
 
 | Provider | Type | Read | Write |
@@ -46,15 +33,11 @@ It works like Terraform for DNS: `plan` shows what would change, `apply` makes i
 
 ---
 
-## Installation
+## Install
 
 ```bash
 # macOS (Apple Silicon)
 curl -fsSL https://github.com/cl8dep/dns-sync/releases/latest/download/dns-sync-darwin-arm64 \
-  -o /usr/local/bin/dns-sync && chmod +x /usr/local/bin/dns-sync
-
-# macOS (Intel)
-curl -fsSL https://github.com/cl8dep/dns-sync/releases/latest/download/dns-sync-darwin-x64 \
   -o /usr/local/bin/dns-sync && chmod +x /usr/local/bin/dns-sync
 
 # Linux
@@ -62,46 +45,22 @@ curl -fsSL https://github.com/cl8dep/dns-sync/releases/latest/download/dns-sync-
   -o /usr/local/bin/dns-sync && chmod +x /usr/local/bin/dns-sync
 ```
 
-Or via Homebrew:
-
-```bash
-brew install cl8dep/tap/dns-sync
-```
-
-See [Getting Started](https://github.com/cl8dep/dns-sync/wiki/Getting-Started) for full installation options including Docker and building from source.
+Homebrew: `brew install cl8dep/tap/dns-sync`
 
 ---
 
-## Quick start
+## Documentation
 
-```bash
-# 1. Copy the example config
-cp config.example.yaml config.yaml
-
-# 2. Set your credentials
-export PORKBUN_API_KEY=pk1_...
-export PORKBUN_SECRET_KEY=sk1_...
-
-# 3. Preview changes
-dns-sync plan -c config.yaml
-
-# 4. Apply
-dns-sync apply -c config.yaml
-```
-
-Full documentation in the [Wiki](https://github.com/cl8dep/dns-sync/wiki):
-
-- [Getting Started](https://github.com/cl8dep/dns-sync/wiki/Getting-Started)
-- [Configuration Reference](https://github.com/cl8dep/dns-sync/wiki/Configuration-Reference)
-- [CI/CD Integration](https://github.com/cl8dep/dns-sync/wiki/CI-CD-Integration)
+- [Getting Started](https://github.com/cl8dep/dns-sync/wiki/Getting-Started) — install, first config, first sync
+- [Configuration Reference](https://github.com/cl8dep/dns-sync/wiki/Configuration-Reference) — all providers and options
+- [Zone File Format](https://github.com/cl8dep/dns-sync/wiki/Zone-File-Format) — record types and syntax
+- [CI/CD Integration](https://github.com/cl8dep/dns-sync/wiki/CI-CD-Integration) — GitHub Actions, GitOps workflow
 
 ---
 
 ## Contributing
 
-Contributions are welcome. See [CONTRIBUTING.md](CONTRIBUTING.md) for how to set up the project, run tests, and submit changes.
-
----
+See [CONTRIBUTING.md](CONTRIBUTING.md).
 
 ## License
 
