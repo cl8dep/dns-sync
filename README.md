@@ -29,7 +29,26 @@ It works like Terraform for DNS: `plan` shows what would change, `apply` makes i
 | Porkbun | `porkbun` | ✓ | ✓ |
 | AWS Route 53 | `route53` | — | — (planned) |
 
-**Supported record types:** A, AAAA, CNAME, MX, TXT, NS, CAA, SRV
+**Supported record types:**
+
+| Type | Description | Supported |
+|---|---|---|
+| A | IPv4 address | ✓ |
+| AAAA | IPv6 address | ✓ |
+| CNAME | Canonical name alias | ✓ |
+| MX | Mail exchange | ✓ |
+| TXT | Text (SPF, DKIM, DMARC…) | ✓ |
+| NS | Name server delegation | ✓ |
+| CAA | Certification Authority Authorization | ✓ |
+| SRV | Service locator | ✓ |
+| ALIAS / ANAME | Flattened CNAME at apex | ✓ (read as CNAME) |
+| PTR | Reverse DNS pointer | — |
+| TLSA | TLS certificate association (DANE) | — |
+| SSHFP | SSH fingerprint | — |
+| NAPTR | Naming authority pointer | — |
+| DNSKEY | DNSSEC zone key | — |
+| DS | DNSSEC delegation signer | — |
+| HTTPS / SVCB | Service binding (modern CDN) | — |
 
 ---
 
