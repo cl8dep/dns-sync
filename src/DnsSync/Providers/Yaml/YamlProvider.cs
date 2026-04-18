@@ -1,5 +1,6 @@
 using DnsSync.Core;
 using DnsSync.Core.Records;
+using static DnsSync.Core.DnsNameHelper;
 using YamlDotNet.Core;
 using YamlDotNet.Core.Events;
 using YamlDotNet.Serialization;
@@ -61,12 +62,6 @@ public class YamlProvider(string directory) : IProvider
             .Select(f => NormalizeZoneName(Path.GetFileNameWithoutExtension(f)))
             .ToList();
         return Task.FromResult<IReadOnlyList<string>>(zones);
-    }
-
-    private static string NormalizeZoneName(string name)
-    {
-        var lower = name.ToLowerInvariant().Trim();
-        return lower.EndsWith('.') ? lower : lower + ".";
     }
 
     public static IReadOnlyList<DnsRecord> ParseZoneYaml(string yaml, string zoneName)
@@ -237,9 +232,4 @@ public class YamlProvider(string directory) : IProvider
         )).ToList();
     }
 
-    private static string NormalizeFqdn(string value)
-    {
-        var lower = value.ToLowerInvariant().Trim();
-        return lower.EndsWith('.') ? lower : lower + ".";
-    }
 }

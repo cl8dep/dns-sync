@@ -5,7 +5,9 @@ using System.Text.Json;
 using System.Text.Json.Serialization;
 using DnsSync.Core;
 using DnsSync.Core.Records;
+using DnsSync.Infrastructure;
 using Microsoft.Extensions.Logging;
+using static DnsSync.Core.DnsNameHelper;
 
 namespace DnsSync.Providers.Gcp;
 
@@ -14,7 +16,7 @@ namespace DnsSync.Providers.Gcp;
 /// Authenticates via a service account credentials file (or GOOGLE_APPLICATION_CREDENTIALS),
 /// falling back to the GCE metadata server for ADC when running on GCP infrastructure.
 /// </summary>
-public class GcpCloudDnsProvider : IProvider
+public class GcpCloudDnsProvider : IProvider, IDisposable
 {
     private readonly string _project;
     private readonly bool? _privateZones;   // null=all, true=private only, false=public only
@@ -23,7 +25,7 @@ public class GcpCloudDnsProvider : IProvider
 
     // Service account credentials (null when using metadata server or user ADC)
     private readonly string? _serviceAccountEmail;
-    private readonly string? _privateKeyPem;
+    private RSA? _rsaKey;
 
     // OAuth2 user credentials (authorized_user from gcloud ADC file)
     private readonly string? _oauthClientId;
@@ -87,7 +89,11 @@ public class GcpCloudDnsProvider : IProvider
             {
                 // Service account JSON key file
                 _serviceAccountEmail = root.TryGetProperty("client_email", out var e) ? e.GetString() : null;
-                _privateKeyPem = root.TryGetProperty("private_key", out var k) ? k.GetString() : null;
+                if (root.TryGetProperty("private_key", out var k) && k.GetString() is { } pem)
+                {
+                    _rsaKey = RSA.Create();
+                    _rsaKey.ImportFromPem(pem);
+                }
 
                 if (string.IsNullOrEmpty(project) && root.TryGetProperty("project_id", out var pid))
                     project = pid.GetString();
@@ -195,6 +201,7 @@ public class GcpCloudDnsProvider : IProvider
         var body = JsonSerializer.Serialize(new { additions, deletions }, JsonOpts);
         _logger.LogDebug("Submitting GCP DNS change: {Additions} additions, {Deletions} deletions",
             additions.Count, deletions.Count);
+        _logger.LogDebug("GCP DNS change body: {Body}", body);
 
         await PostAsync($"/projects/{_project}/managedZones/{managedZone}/changes", body, ct);
 
@@ -370,14 +377,48 @@ public class GcpCloudDnsProvider : IProvider
     }
 
     /// <summary>
-    /// GCP returns TXT rrdatas as quoted strings: "\"actual content\""
-    /// Strip the outer quotes and unescape inner ones.
+    /// GCP returns TXT rrdatas as one or more quoted strings per DNS spec chunk:
+    ///   short value:  "v=spf1 include:example.com ~all"
+    ///   long value:   "first 255 chars" "remaining chars"
+    /// Parse all quoted chunks and concatenate their content into one plain string.
     /// </summary>
-    private static string UnquoteTxt(string value)
+    internal static string UnquoteTxt(string value)
     {
-        if (value.StartsWith('"') && value.EndsWith('"') && value.Length >= 2)
-            return value[1..^1].Replace("\\\"", "\"");
-        return value;
+        var result = new System.Text.StringBuilder();
+        var i = 0;
+        while (i < value.Length)
+        {
+            // Skip whitespace between chunks
+            while (i < value.Length && value[i] == ' ') i++;
+            if (i >= value.Length) break;
+
+            if (value[i] == '"')
+            {
+                i++; // skip opening quote
+                while (i < value.Length && value[i] != '"')
+                {
+                    if (value[i] == '\\' && i + 1 < value.Length)
+                    {
+                        result.Append(value[i + 1]);
+                        i += 2;
+                    }
+                    else
+                    {
+                        result.Append(value[i]);
+                        i++;
+                    }
+                }
+                if (i < value.Length) i++; // skip closing quote
+            }
+            else
+            {
+                // Unquoted value — take until next whitespace
+                var start = i;
+                while (i < value.Length && value[i] != ' ') i++;
+                result.Append(value[start..i]);
+            }
+        }
+        return result.ToString();
     }
 
     // ─── GCP payload builders ─────────────────────────────────────────────────
@@ -403,11 +444,40 @@ public class GcpCloudDnsProvider : IProvider
         _ => throw new NotSupportedException($"Record type {record.Type} not supported for GCP DNS")
     };
 
-    private static string QuoteTxt(string value)
+    internal static string QuoteTxt(string value)
     {
-        // GCP expects TXT values as quoted strings with inner quotes escaped
-        var escaped = value.Replace("\\", "\\\\").Replace("\"", "\\\"");
-        return $"\"{escaped}\"";
+        // GCP (and DNS RFC 1035) limits each TXT string to 255 bytes.
+        // For values that exceed this, GCP stores them as multiple adjacent quoted chunks:
+        //   "first 255 bytes" "remaining bytes"
+        // We must reproduce that exact format when building deletions/additions so that
+        // the rrdata we send matches what GCP stored.
+        const int maxChunkBytes = 255;
+        var bytes = System.Text.Encoding.UTF8.GetBytes(value);
+
+        if (bytes.Length <= maxChunkBytes)
+        {
+            var escaped = value.Replace("\\", "\\\\").Replace("\"", "\\\"");
+            return $"\"{escaped}\"";
+        }
+
+        // Split into 255-byte chunks (by UTF-8 byte length, not char count)
+        var chunks = new List<string>();
+        var offset = 0;
+        while (offset < bytes.Length)
+        {
+            var chunkBytes = Math.Min(maxChunkBytes, bytes.Length - offset);
+            // Ensure we don't split a multi-byte UTF-8 sequence
+            while (chunkBytes > 0 && (bytes[offset + chunkBytes - 1] & 0xC0) == 0x80)
+                chunkBytes--;
+            if (chunkBytes == 0) chunkBytes = Math.Min(maxChunkBytes, bytes.Length - offset);
+
+            var chunk = System.Text.Encoding.UTF8.GetString(bytes, offset, chunkBytes);
+            var escaped = chunk.Replace("\\", "\\\\").Replace("\"", "\\\"");
+            chunks.Add($"\"{escaped}\"");
+            offset += chunkBytes;
+        }
+
+        return string.Join(" ", chunks);
     }
 
     // ─── Authentication ───────────────────────────────────────────────────────
@@ -418,7 +488,7 @@ public class GcpCloudDnsProvider : IProvider
         if (_accessToken is not null && DateTimeOffset.UtcNow < _tokenExpiry - TimeSpan.FromMinutes(5))
             return _accessToken;
 
-        if (_serviceAccountEmail is not null && _privateKeyPem is not null)
+        if (_serviceAccountEmail is not null && _rsaKey is not null)
         {
             _accessToken = await GetServiceAccountTokenAsync(ct);
         }
@@ -436,7 +506,7 @@ public class GcpCloudDnsProvider : IProvider
 
     private async Task<string> GetServiceAccountTokenAsync(CancellationToken ct)
     {
-        var jwt = CreateServiceAccountJwt(_serviceAccountEmail!, _privateKeyPem!, Scope);
+        var jwt = CreateServiceAccountJwt(_serviceAccountEmail!, _rsaKey!, Scope);
 
         var resp = await _http.PostAsync(
             "https://oauth2.googleapis.com/token",
@@ -445,7 +515,7 @@ public class GcpCloudDnsProvider : IProvider
                 new KeyValuePair<string, string>("assertion", jwt)
             ]), ct);
 
-        resp.EnsureSuccessStatusCode();
+        await EnsureOAuthSuccessAsync(resp, "service account");
 
         var doc = JsonDocument.Parse(await resp.Content.ReadAsStringAsync(ct));
         var token = doc.RootElement.GetProperty("access_token").GetString()!;
@@ -466,7 +536,11 @@ public class GcpCloudDnsProvider : IProvider
         try
         {
             resp = await _http.SendAsync(req, ct);
-            resp.EnsureSuccessStatusCode();
+            await EnsureOAuthSuccessAsync(resp, "metadata server");
+        }
+        catch (InvalidOperationException)
+        {
+            throw;
         }
         catch (Exception ex)
         {
@@ -496,7 +570,7 @@ public class GcpCloudDnsProvider : IProvider
                 new KeyValuePair<string, string>("refresh_token", _oauthRefreshToken!)
             ]), ct);
 
-        resp.EnsureSuccessStatusCode();
+        await EnsureOAuthSuccessAsync(resp, "user credentials");
 
         var doc = JsonDocument.Parse(await resp.Content.ReadAsStringAsync(ct));
         var token = doc.RootElement.GetProperty("access_token").GetString()!;
@@ -511,7 +585,7 @@ public class GcpCloudDnsProvider : IProvider
     /// Build a signed JWT for service account authentication (RS256).
     /// No external dependencies — uses System.Security.Cryptography.
     /// </summary>
-    private static string CreateServiceAccountJwt(string email, string privateKeyPem, string scope)
+    private static string CreateServiceAccountJwt(string email, RSA rsa, string scope)
     {
         var now = DateTimeOffset.UtcNow.ToUnixTimeSeconds();
 
@@ -528,9 +602,6 @@ public class GcpCloudDnsProvider : IProvider
         }));
 
         var signingInput = Encoding.UTF8.GetBytes($"{header}.{payload}");
-
-        using var rsa = RSA.Create();
-        rsa.ImportFromPem(privateKeyPem);
         var signature = rsa.SignData(signingInput, HashAlgorithmName.SHA256, RSASignaturePadding.Pkcs1);
 
         return $"{header}.{payload}.{Base64UrlEncode(signature)}";
@@ -542,17 +613,17 @@ public class GcpCloudDnsProvider : IProvider
     // ─── HTTP helpers ─────────────────────────────────────────────────────────
 
     private async Task<string> GetAsync(string path, CancellationToken ct) =>
-        await RetryAsync(async () =>
+        await HttpRetryPolicy.ExecuteAsync(async () =>
         {
             var req = new HttpRequestMessage(HttpMethod.Get, BaseUrl + path);
             req.Headers.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue(
                 "Bearer", await GetAccessTokenAsync(ct));
             var resp = await _http.SendAsync(req, ct);
             return await EnsureSuccessAsync(resp);
-        }, ct);
+        }, _logger, ct);
 
     private async Task<string> PostAsync(string path, string json, CancellationToken ct) =>
-        await RetryAsync(async () =>
+        await HttpRetryPolicy.ExecuteAsync(async () =>
         {
             var req = new HttpRequestMessage(HttpMethod.Post, BaseUrl + path)
             {
@@ -560,9 +631,35 @@ public class GcpCloudDnsProvider : IProvider
             };
             req.Headers.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue(
                 "Bearer", await GetAccessTokenAsync(ct));
+            _logger.LogDebug("POST {Url}\nBody: {Body}", BaseUrl + path, json);
             var resp = await _http.SendAsync(req, ct);
-            return await EnsureSuccessAsync(resp);
-        }, ct);
+            var responseBody = await resp.Content.ReadAsStringAsync();
+            _logger.LogDebug("GCP response {Status}: {Body}", (int)resp.StatusCode, responseBody);
+            return await EnsureSuccessAsync(new HttpResponseMessage(resp.StatusCode)
+            {
+                Content = new StringContent(responseBody, Encoding.UTF8, "application/json")
+            });
+        }, _logger, ct);
+
+    private static async Task EnsureOAuthSuccessAsync(HttpResponseMessage resp, string credentialType)
+    {
+        if (resp.IsSuccessStatusCode) return;
+
+        var body = await resp.Content.ReadAsStringAsync();
+        string? detail = null;
+        try
+        {
+            var doc = JsonDocument.Parse(body);
+            if (doc.RootElement.TryGetProperty("error_description", out var desc))
+                detail = desc.GetString();
+            else if (doc.RootElement.TryGetProperty("error", out var err))
+                detail = err.GetString();
+        }
+        catch { /* ignore */ }
+
+        throw new InvalidOperationException(
+            $"GCP OAuth token request failed ({credentialType}, {(int)resp.StatusCode}): {detail ?? body}");
+    }
 
     private static async Task<string> EnsureSuccessAsync(HttpResponseMessage resp)
     {
@@ -584,33 +681,11 @@ public class GcpCloudDnsProvider : IProvider
             null, resp.StatusCode);
     }
 
-    private async Task<T> RetryAsync<T>(Func<Task<T>> action, CancellationToken ct, int maxRetries = 3)
+    public void Dispose()
     {
-        var delay = TimeSpan.FromSeconds(1);
-        for (var attempt = 0; attempt < maxRetries; attempt++)
-        {
-            try
-            {
-                return await action();
-            }
-            catch (HttpRequestException ex) when (IsTransient(ex))
-            {
-                _logger.LogWarning("Transient GCP error on attempt {Attempt}/{Max}: {Error}. Retrying in {Delay}ms",
-                    attempt + 1, maxRetries, ex.Message, delay.TotalMilliseconds);
-                await Task.Delay(delay, ct);
-                delay *= 2;
-            }
-        }
-        return await action();
+        _rsaKey?.Dispose();
+        _http.Dispose();
     }
-
-    private static bool IsTransient(HttpRequestException ex) => ex.StatusCode is
-        HttpStatusCode.TooManyRequests or
-        HttpStatusCode.InternalServerError or
-        HttpStatusCode.BadGateway or
-        HttpStatusCode.ServiceUnavailable or
-        HttpStatusCode.GatewayTimeout or
-        HttpStatusCode.RequestTimeout;
 
     // ─── Helpers ──────────────────────────────────────────────────────────────
 
@@ -637,15 +712,4 @@ public class GcpCloudDnsProvider : IProvider
         return File.Exists(path) ? path : null;
     }
 
-    private static string NormalizeZoneName(string name)
-    {
-        var lower = name.ToLowerInvariant().Trim();
-        return lower.EndsWith('.') ? lower : lower + ".";
-    }
-
-    private static string NormalizeFqdn(string value)
-    {
-        var lower = value.ToLowerInvariant().Trim();
-        return lower.EndsWith('.') ? lower : lower + ".";
-    }
 }

@@ -9,7 +9,7 @@ public static class ConfigLoader
     private static readonly Regex EnvVarPattern = new(@"\$\{([^}]+)\}", RegexOptions.Compiled);
 
     private static readonly HashSet<string> KnownProviderTypes =
-        new(StringComparer.OrdinalIgnoreCase) { "yaml", "cloudflare", "gcp_cloud_dns", "route53" };
+        new(StringComparer.OrdinalIgnoreCase) { "yaml", "cloudflare", "gcp_cloud_dns" };
 
     public static DnsSyncConfig Load(string path)
     {

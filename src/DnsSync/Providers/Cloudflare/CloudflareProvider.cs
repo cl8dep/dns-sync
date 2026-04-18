@@ -5,6 +5,7 @@ using System.Text.Json;
 using System.Text.Json.Serialization;
 using DnsSync.Core;
 using DnsSync.Core.Records;
+using DnsSync.Infrastructure;
 using Microsoft.Extensions.Logging;
 
 namespace DnsSync.Providers.Cloudflare;
@@ -85,7 +86,7 @@ public class CloudflareProvider : IProvider
 
     public async Task<DnsZone> GetZoneAsync(string zoneName, CancellationToken ct = default)
     {
-        var normalized = NormalizeZoneName(zoneName);
+        var normalized = DnsNameHelper.NormalizeZoneName(zoneName);
         var zoneId = await ResolveZoneIdAsync(normalized, ct);
         var records = await GetAllRecordsAsync(zoneId, normalized, ct);
         return new DnsZone { Name = normalized, Records = records };
@@ -93,7 +94,7 @@ public class CloudflareProvider : IProvider
 
     public async Task<ApplyResult> ApplyPlanAsync(string zoneName, DnsPlan plan, CancellationToken ct = default)
     {
-        var normalized = NormalizeZoneName(zoneName);
+        var normalized = DnsNameHelper.NormalizeZoneName(zoneName);
         var zoneId = await ResolveZoneIdAsync(normalized, ct);
         var existing = await GetExistingRecordMap(zoneId, ct);
 
@@ -155,7 +156,7 @@ public class CloudflareProvider : IProvider
 
             foreach (var z in doc.RootElement.GetProperty("result").EnumerateArray())
             {
-                var name = NormalizeZoneName(z.GetProperty("name").GetString() ?? "");
+                var name = DnsNameHelper.NormalizeZoneName(z.GetProperty("name").GetString() ?? "");
                 if (name.Length > 1) zones.Add(name);
             }
 
@@ -312,7 +313,7 @@ public class CloudflareProvider : IProvider
                 if (!r.TryGetProperty("id", out var idEl) || !r.TryGetProperty("name", out var nameEl))
                     continue;
 
-                var key = (NormalizeFqdn(nameEl.GetString()!),
+                var key = (DnsNameHelper.NormalizeFqdn(nameEl.GetString()!),
                            r.GetProperty("type").GetString()!.ToUpperInvariant());
                 var id = idEl.GetString()!;
 
@@ -336,7 +337,7 @@ public class CloudflareProvider : IProvider
     private DnsRecord? ParseCloudflareRecord(JsonElement r, string zoneName)
     {
         var type = r.GetProperty("type").GetString()?.ToUpperInvariant() ?? "";
-        var name = NormalizeFqdn(r.GetProperty("name").GetString() ?? "");
+        var name = DnsNameHelper.NormalizeFqdn(r.GetProperty("name").GetString() ?? "");
         var ttl = r.TryGetProperty("ttl", out var ttlEl) ? ttlEl.GetInt32() : 3600;
         // Cloudflare uses TTL=1 to mean "automatic" (proxied records). Treat as 300.
         if (ttl == 1) ttl = 300;
@@ -356,7 +357,7 @@ public class CloudflareProvider : IProvider
             "CNAME" => new CnameRecord
             {
                 Name = name, Type = "CNAME", Ttl = ttl,
-                Target = NormalizeFqdn(r.GetProperty("content").GetString()!)
+                Target = DnsNameHelper.NormalizeFqdn(r.GetProperty("content").GetString()!)
             },
             "MX" => new MxRecord
             {
@@ -365,7 +366,7 @@ public class CloudflareProvider : IProvider
                 [
                     new MxValue(
                         r.TryGetProperty("priority", out var prio) ? prio.GetInt32() : 10,
-                        NormalizeFqdn(r.GetProperty("content").GetString()!))
+                        DnsNameHelper.NormalizeFqdn(r.GetProperty("content").GetString()!))
                 ]
             },
             "TXT" => new TxtRecord
@@ -376,7 +377,7 @@ public class CloudflareProvider : IProvider
             "NS" => new NsRecord
             {
                 Name = name, Type = "NS", Ttl = ttl,
-                Nameservers = [NormalizeFqdn(r.GetProperty("content").GetString()!)]
+                Nameservers = [DnsNameHelper.NormalizeFqdn(r.GetProperty("content").GetString()!)]
             },
             "SRV" => ParseSrvFromCloudflare(name, ttl, r),
             "CAA" => ParseCaaFromCloudflare(name, ttl, r),
@@ -417,7 +418,7 @@ public class CloudflareProvider : IProvider
                     data.TryGetProperty("priority", out var prio) ? prio.GetInt32() : 0,
                     data.TryGetProperty("weight", out var wt) ? wt.GetInt32() : 0,
                     data.TryGetProperty("port", out var port) ? port.GetInt32() : 0,
-                    NormalizeFqdn(
+                    DnsNameHelper.NormalizeFqdn(
                         data.TryGetProperty("target", out var tgt) ? tgt.GetString() ?? "" : ""))
             ]
         };
@@ -515,62 +516,31 @@ public class CloudflareProvider : IProvider
     // --- HTTP helpers with retry ---
 
     private async Task<string> GetAsync(string path, CancellationToken ct) =>
-        await RetryAsync(async () => await EnsureSuccessAsync(await _http.GetAsync(BaseUrl + path, ct)), ct);
+        await HttpRetryPolicy.ExecuteAsync(
+            async () => await EnsureSuccessAsync(await _http.GetAsync(BaseUrl + path, ct)),
+            _logger, ct);
 
     private async Task<string> PostAsync(string path, string json, CancellationToken ct) =>
-        await RetryAsync(async () =>
+        await HttpRetryPolicy.ExecuteAsync(async () =>
         {
             var content = new StringContent(json, Encoding.UTF8, "application/json");
             return await EnsureSuccessAsync(await _http.PostAsync(BaseUrl + path, content, ct));
-        }, ct);
+        }, _logger, ct);
 
     private async Task<string> PatchAsync(string path, string json, CancellationToken ct) =>
-        await RetryAsync(async () =>
+        await HttpRetryPolicy.ExecuteAsync(async () =>
         {
             var request = new HttpRequestMessage(HttpMethod.Patch, BaseUrl + path)
             {
                 Content = new StringContent(json, Encoding.UTF8, "application/json")
             };
             return await EnsureSuccessAsync(await _http.SendAsync(request, ct));
-        }, ct);
+        }, _logger, ct);
 
     private async Task<string> DeleteAsync(string path, CancellationToken ct) =>
-        await RetryAsync(async () => await EnsureSuccessAsync(await _http.DeleteAsync(BaseUrl + path, ct)), ct);
-
-    private async Task<T> RetryAsync<T>(Func<Task<T>> action, CancellationToken ct, int maxRetries = 3)
-    {
-        var delay = TimeSpan.FromSeconds(1);
-        for (var attempt = 0; attempt < maxRetries; attempt++)
-        {
-            try
-            {
-                return await action();
-            }
-            catch (Exception ex) when (IsTransient(ex))
-            {
-                _logger.LogWarning(
-                    "Transient error on attempt {Attempt}/{Max}: {Error}. Retrying in {Delay}ms",
-                    attempt + 1, maxRetries, ex.Message, delay.TotalMilliseconds);
-                await Task.Delay(delay, ct);
-                delay *= 2;
-            }
-        }
-        // Final attempt — let any exception propagate
-        return await action();
-    }
-
-    private static bool IsTransient(Exception ex) => ex switch
-    {
-        CloudflareRateLimitException => true,
-        HttpRequestException { StatusCode:
-            HttpStatusCode.RequestTimeout or
-            HttpStatusCode.InternalServerError or
-            HttpStatusCode.BadGateway or
-            HttpStatusCode.ServiceUnavailable or
-            HttpStatusCode.GatewayTimeout } => true,
-        TaskCanceledException => true,   // HttpClient timeout
-        _ => false
-    };
+        await HttpRetryPolicy.ExecuteAsync(
+            async () => await EnsureSuccessAsync(await _http.DeleteAsync(BaseUrl + path, ct)),
+            _logger, ct);
 
     private static async Task<string> EnsureSuccessAsync(HttpResponseMessage resp)
     {
@@ -613,44 +583,47 @@ public class CloudflareProvider : IProvider
         return body;
     }
 
-    private static string NormalizeZoneName(string name)
-    {
-        var lower = name.ToLowerInvariant().Trim();
-        return lower.EndsWith('.') ? lower : lower + ".";
-    }
-
-    private static string NormalizeFqdn(string value)
-    {
-        var lower = value.ToLowerInvariant().Trim();
-        return lower.EndsWith('.') ? lower : lower + ".";
-    }
-
     /// <summary>
     /// Cloudflare returns TXT record content as DNS wire-format quoted strings.
     /// Long values (e.g. DKIM keys) are split into 255-byte chunks:
     ///   "chunk1" "chunk2"
-    /// This method joins all chunks into a single plain string.
+    /// This method joins all chunks into a single plain string, handling backslash escapes.
     /// </summary>
     private static string StripTxtQuotes(string content)
     {
-        content = content.Trim();
-        if (!content.StartsWith('"')) return content;
-
-        var sb = new System.Text.StringBuilder();
+        var result = new System.Text.StringBuilder();
         var i = 0;
         while (i < content.Length)
         {
+            while (i < content.Length && content[i] == ' ') i++;
+            if (i >= content.Length) break;
+
             if (content[i] == '"')
             {
                 i++; // skip opening quote
                 while (i < content.Length && content[i] != '"')
-                    sb.Append(content[i++]);
+                {
+                    if (content[i] == '\\' && i + 1 < content.Length)
+                    {
+                        result.Append(content[i + 1]);
+                        i += 2;
+                    }
+                    else
+                    {
+                        result.Append(content[i]);
+                        i++;
+                    }
+                }
                 if (i < content.Length) i++; // skip closing quote
             }
             else
-                i++; // skip whitespace between chunks
+            {
+                var start = i;
+                while (i < content.Length && content[i] != ' ') i++;
+                result.Append(content[start..i]);
+            }
         }
-        return sb.ToString();
+        return result.ToString();
     }
 }
 

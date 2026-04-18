@@ -8,7 +8,7 @@ public static class CommandHelpers
 {
     public static DnsSyncConfig LoadAndValidateConfig(BaseSettings settings)
     {
-        AnsiConsole.MarkupLine($"Loading config from [bold]{settings.ConfigPath}[/]");
+        AnsiConsole.MarkupLine($"Loading config from [bold]{Markup.Escape(settings.ConfigPath)}[/]");
 
         DnsSyncConfig config;
         try

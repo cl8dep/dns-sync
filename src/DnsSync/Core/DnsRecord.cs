@@ -16,11 +16,7 @@ public abstract class DnsRecord
     public abstract string FormatValues();
 
     /// <summary>Normalize a domain name to FQDN with trailing dot, lowercase.</summary>
-    protected static string NormalizeFqdn(string value)
-    {
-        var lower = value.ToLowerInvariant().Trim();
-        return lower.EndsWith('.') ? lower : lower + ".";
-    }
+    protected static string NormalizeFqdn(string value) => DnsNameHelper.NormalizeFqdn(value);
 
     /// <summary>
     /// Join and re-split TXT strings to normalize provider-specific chunking.

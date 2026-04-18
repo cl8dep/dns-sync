@@ -175,4 +175,93 @@ public class ZoneValidatorTests
 
         result.IsValid.ShouldBeTrue();
     }
+
+    [Fact]
+    public void Validate_SrvPortOutOfRange_ReturnsError()
+    {
+        var zone = ZoneWith(new SrvRecord
+        {
+            Name = "_sip._tcp.example.com.", Type = "SRV", Ttl = 300,
+            Values = [new SrvValue(10, 20, 99999, "sip.example.com.")]
+        });
+
+        var result = ZoneValidator.Validate(zone);
+
+        result.IsValid.ShouldBeFalse();
+        result.Errors.ShouldContain(e => e.Contains("SRV") && e.Contains("port") && e.Contains("out of range"));
+    }
+
+    [Fact]
+    public void Validate_SrvPortZero_IsValid()
+    {
+        var zone = ZoneWith(new SrvRecord
+        {
+            Name = "_sip._tcp.example.com.", Type = "SRV", Ttl = 300,
+            Values = [new SrvValue(10, 20, 0, "sip.example.com.")]
+        });
+
+        var result = ZoneValidator.Validate(zone);
+
+        result.IsValid.ShouldBeTrue();
+    }
+
+    [Fact]
+    public void Validate_MxNoValues_ReturnsError()
+    {
+        var zone = ZoneWith(new MxRecord
+        {
+            Name = "example.com.", Type = "MX", Ttl = 300,
+            Values = []
+        });
+
+        var result = ZoneValidator.Validate(zone);
+
+        result.IsValid.ShouldBeFalse();
+        result.Errors.ShouldContain(e => e.Contains("MX") && e.Contains("no values"));
+    }
+
+    [Fact]
+    public void Validate_NsNoNameservers_ReturnsError()
+    {
+        var zone = ZoneWith(new NsRecord
+        {
+            Name = "example.com.", Type = "NS", Ttl = 300,
+            Nameservers = []
+        });
+
+        var result = ZoneValidator.Validate(zone);
+
+        result.IsValid.ShouldBeFalse();
+        result.Errors.ShouldContain(e => e.Contains("NS") && e.Contains("no nameservers"));
+    }
+
+    [Fact]
+    public void Validate_CaaNoValues_ReturnsError()
+    {
+        var zone = ZoneWith(new CaaRecord
+        {
+            Name = "example.com.", Type = "CAA", Ttl = 300,
+            Values = []
+        });
+
+        var result = ZoneValidator.Validate(zone);
+
+        result.IsValid.ShouldBeFalse();
+        result.Errors.ShouldContain(e => e.Contains("CAA") && e.Contains("no values"));
+    }
+
+    [Fact]
+    public void Validate_SrvNegativePort_ReturnsError()
+    {
+        var zone = ZoneWith(new SrvRecord
+        {
+            Name = "_sip._tcp.example.com.", Type = "SRV", Ttl = 300,
+            Values = [new SrvValue(10, 20, -1, "sip.example.com.")]
+        });
+
+        var result = ZoneValidator.Validate(zone);
+
+        result.IsValid.ShouldBeFalse();
+        result.Errors.ShouldContain(e => e.Contains("SRV") && e.Contains("port") && e.Contains("out of range"));
+    }
 }

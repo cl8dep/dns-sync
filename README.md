@@ -282,8 +282,8 @@ dns-sync apply --config config.yaml --force           # skip safety limit
 |---|---|---|---|
 | `yaml` | ✓ | — | Available |
 | `cloudflare` | ✓ | ✓ | Available |
-| `route53` | — | — | Coming soon |
-| `gcp_cloud_dns` | — | — | Coming soon |
+| `gcp_cloud_dns` | ✓ | ✓ | Available |
+| `route53` | — | — | Not yet implemented |
 
 ---
 

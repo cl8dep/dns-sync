@@ -53,7 +53,7 @@ public interface IProvider
     Task PreflightAsync(CancellationToken ct = default);
     Task<IReadOnlyList<string>> GetZonesAsync(CancellationToken ct = default);
     Task<DnsZone> GetZoneAsync(string zoneName, CancellationToken ct = default);
-    Task ApplyPlanAsync(string zoneName, IReadOnlyList<DnsChange> changes, CancellationToken ct = default);
+    Task<ApplyResult> ApplyPlanAsync(string zoneName, DnsPlan plan, CancellationToken ct = default);
 }
 ```
 

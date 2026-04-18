@@ -25,8 +25,8 @@ public class ValidateCommand : AsyncCommand<BaseSettings>
                 try
                 {
                     var provider = new YamlProvider(sourceProvider.Directory!);
-                    await provider.PreflightAsync();
-                    var zone = await provider.GetZoneAsync(zoneName);
+                    await provider.PreflightAsync(cancellationToken);
+                    var zone = await provider.GetZoneAsync(zoneName, cancellationToken);
                     var result = ZoneValidator.Validate(zone);
 
                     if (result.Errors.Count > 0 || result.Warnings.Count > 0)

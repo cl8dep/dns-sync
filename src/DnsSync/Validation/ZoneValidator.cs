@@ -34,7 +34,7 @@ public static class ZoneValidator
             if (!KnownTypes.Contains(record.Type))
                 result.AddWarning($"{record.Name} {record.Type}: unknown record type, will be skipped");
             else if (!SupportedTypes.Contains(record.Type))
-                result.AddWarning($"{record.Name} {record.Type}: not supported in Phase 1, will be skipped");
+                result.AddWarning($"{record.Name} {record.Type}: record type not supported, will be skipped");
 
             // Validate TTL
             if (record.Ttl < 0)

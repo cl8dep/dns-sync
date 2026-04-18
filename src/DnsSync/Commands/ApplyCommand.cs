@@ -12,6 +12,12 @@ public class ApplyCommand(ILoggerFactory loggerFactory) : AsyncCommand<ApplySett
     {
         try
         {
+            if (settings.MaxChanges < 1)
+            {
+                AnsiConsole.MarkupLine("[red]✗ --max-changes must be at least 1.[/]");
+                return 1;
+            }
+
             var config = CommandHelpers.LoadAndValidateConfig(settings);
 
             var useSpinners = !settings.GcpLogs;
