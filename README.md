@@ -67,7 +67,23 @@ Homebrew: `brew install cl8dep/tap/dns-sync`
 ## Performance
 
 <!-- BENCHMARK_START -->
-*Benchmark results will appear here after the first release. Run manually with `docker run --rm dns-sync-benchmark`.*
+> Measured with [hyperfine](https://github.com/sharkdp/hyperfine) on ubuntu-latest (linux/x64) — dns-sync 0.0.0-dev+b5377a7e0398c19c4ce40847005568299df34c41, octoDNS 1.16.0. Updated 2026-04-19.
+
+**Startup time (`--help`)**
+
+| Command | Mean [ms] | Min [ms] | Max [ms] | Relative |
+|:---|---:|---:|---:|---:|
+| `dns-sync` | 95.6 ± 2.7 | 93.5 | 106.4 | 1.00 |
+| `octodns-sync` | 117.3 ± 2.0 | 114.5 | 121.5 | 1.23 ± 0.04 |
+
+
+**Plan time (YAML → YAML, no network)**
+
+| Command | Mean [ms] | Min [ms] | Max [ms] | Relative |
+|:---|---:|---:|---:|---:|
+| `dns-sync` | 142.6 ± 3.4 | 137.3 | 150.4 | 1.00 |
+| `octodns-sync` | 164.5 ± 2.9 | 159.8 | 171.8 | 1.15 ± 0.03 |
+
 <!-- BENCHMARK_END -->
 
 ---
