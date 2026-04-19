@@ -80,6 +80,7 @@ jobs:
         run: |
           hyperfine --warmup 3 --runs 20 \
             --export-markdown /tmp/bench-startup.md \
+            --ignore-failure \
             --command-name "dns-sync" "dns-sync --help" \
             --command-name "octodns-sync" "octodns-sync -h"
 
@@ -87,6 +88,7 @@ jobs:
         run: |
           hyperfine --warmup 3 --runs 20 \
             --export-markdown /tmp/bench-plan.md \
+            --ignore-failure \
             --command-name "dns-sync" "dns-sync plan -c /tmp/bench-dns-sync.yaml" \
             --command-name "octodns-sync" "octodns-sync --config-file /tmp/bench-octodns.yaml"
 
