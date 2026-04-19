@@ -64,6 +64,14 @@ Homebrew: `brew install cl8dep/tap/dns-sync`
 
 ---
 
+## Performance
+
+<!-- BENCHMARK_START -->
+*Benchmark results will appear here after the first release. Run manually with `docker run --rm dns-sync-benchmark`.*
+<!-- BENCHMARK_END -->
+
+---
+
 ## Contributing
 
 See [CONTRIBUTING.md](CONTRIBUTING.md).

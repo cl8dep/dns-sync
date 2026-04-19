@@ -1,0 +1,153 @@
+name: Benchmark
+
+on:
+  release:
+    types: [published]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  benchmark:
+    name: hyperfine vs OctoDNS
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: "10.0.x"
+
+      - name: Build dns-sync
+        run: |
+          dotnet publish src/DnsSync/DnsSync.csproj \
+            -c Release -r linux-x64 --self-contained true \
+            -p:PublishSingleFile=true \
+            -p:PublishReadyToRun=true \
+            -p:DebugType=none -p:DebugSymbols=false \
+            -o /tmp/dns-sync-bin --nologo -q
+          sudo cp /tmp/dns-sync-bin/dns-sync /usr/local/bin/dns-sync
+
+      - name: Install OctoDNS
+        run: pip install --quiet octodns
+
+      - name: Install hyperfine
+        run: |
+          wget -q https://github.com/sharkdp/hyperfine/releases/download/v1.18.0/hyperfine_1.18.0_amd64.deb
+          sudo dpkg -i hyperfine_1.18.0_amd64.deb
+
+      - name: Prepare benchmark fixtures
+        run: |
+          mkdir -p /tmp/bench-target
+          cp benchmark/zones/dns-sync/example.com.yaml /tmp/bench-target/example.com.yaml
+          cat > /tmp/bench-dns-sync.yaml << 'EOF'
+          providers:
+            source:
+              type: yaml
+              directory: ${{ github.workspace }}/benchmark/zones/dns-sync
+            target:
+              type: yaml
+              directory: /tmp/bench-target
+          zones:
+            example.com.:
+              source: source
+              targets:
+                - target
+          EOF
+          cat > /tmp/bench-octodns.yaml << 'EOF'
+          providers:
+            source:
+              class: octodns.provider.yaml.YamlProvider
+              directory: ${{ github.workspace }}/benchmark/zones/octodns
+            target:
+              class: octodns.provider.yaml.YamlProvider
+              directory: /tmp/bench-target
+              default_ttl: 3600
+          zones:
+            example.com.:
+              sources:
+                - source
+              targets:
+                - target
+          EOF
+
+      - name: Run benchmark — startup
+        run: |
+          hyperfine --warmup 3 --runs 20 \
+            --export-markdown /tmp/bench-startup.md \
+            --command-name "dns-sync" "dns-sync --help" \
+            --command-name "octodns-sync" "octodns-sync -h"
+
+      - name: Run benchmark — plan
+        run: |
+          hyperfine --warmup 3 --runs 20 \
+            --export-markdown /tmp/bench-plan.md \
+            --command-name "dns-sync" "dns-sync plan -c /tmp/bench-dns-sync.yaml" \
+            --command-name "octodns-sync" "octodns-sync --config-file /tmp/bench-octodns.yaml"
+
+      - name: Update README benchmark section
+        run: |
+          STARTUP=$(cat /tmp/bench-startup.md)
+          PLAN=$(cat /tmp/bench-plan.md)
+          VERSION=$(dns-sync --version 2>/dev/null || echo "dev")
+          DATE=$(date -u +"%Y-%m-%d")
+
+          # Build replacement block
+          BLOCK="<!-- BENCHMARK_START -->
+          > Measured with [hyperfine](https://github.com/sharkdp/hyperfine) on ubuntu-latest (linux/x64) — dns-sync ${VERSION}, OctoDNS $(octodns-sync --version 2>&1 | head -1). Updated ${DATE}.
+
+          **Startup time (\`--help\`)**
+
+          ${STARTUP}
+
+          **Plan time (YAML → YAML, no network)**
+
+          ${PLAN}
+          <!-- BENCHMARK_END -->"
+
+          # Replace section in README
+          python3 - << 'PYEOF'
+          import re, os
+          readme = open('README.md').read()
+          block = open('/tmp/bench-startup.md').read()
+          plan  = open('/tmp/bench-plan.md').read()
+          import subprocess
+          version = subprocess.getoutput('dns-sync --version 2>/dev/null || echo dev')
+          oct_ver = subprocess.getoutput('octodns-sync --version 2>&1 | head -1')
+          from datetime import datetime, timezone
+          date = datetime.now(timezone.utc).strftime('%Y-%m-%d')
+
+          replacement = f"""<!-- BENCHMARK_START -->
+          > Measured with [hyperfine](https://github.com/sharkdp/hyperfine) on ubuntu-latest (linux/x64) — dns-sync {version}, {oct_ver}. Updated {date}.
+
+          **Startup time (`--help`)**
+
+          {block}
+
+          **Plan time (YAML → YAML, no network)**
+
+          {plan}
+          <!-- BENCHMARK_END -->"""
+
+          new = re.sub(
+              r'<!-- BENCHMARK_START -->.*?<!-- BENCHMARK_END -->',
+              replacement,
+              readme,
+              flags=re.DOTALL
+          )
+          open('README.md', 'w').write(new)
+          print("README updated")
+          PYEOF
+
+      - name: Commit updated README
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add README.md
+          git diff --staged --quiet || git commit -m "chore: update benchmark results [skip ci]"
+          git push
