@@ -138,6 +138,10 @@ app.Configure(config =>
     config.AddCommand<ApplyCommand>("apply")
         .WithDescription("Apply changes from source to all target providers")
         .WithExample(["apply", "--config", "config.yaml", "--yes"]);
+
+    config.AddCommand<ImportCommand>("import")
+        .WithDescription("Import current DNS state from a provider into YAML zone files")
+        .WithExample(["import", "--config", "config.yaml", "--provider", "cloudflare", "--all"]);
 });
 
 return await app.RunAsync(args);
