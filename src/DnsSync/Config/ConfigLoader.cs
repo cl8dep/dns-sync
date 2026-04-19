@@ -126,6 +126,9 @@ public static class ConfigLoader
 
                 if (target == zone.Source)
                     errors.Add($"Zone '{zoneName}' uses '{target}' as both source and target — this would overwrite source data.");
+
+                if (config.Providers.TryGetValue(target, out var targetConfig) && targetConfig.ReadOnly)
+                    errors.Add($"Zone '{zoneName}' uses read-only provider '{target}' as a target — remove 'readonly: true' or use a different target.");
             }
         }
 

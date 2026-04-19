@@ -44,6 +44,9 @@ public class ProviderConfig
     [YamlMember(Alias = "region")]
     public string? Region { get; set; }
 
+    [YamlMember(Alias = "readonly")]
+    public bool ReadOnly { get; set; }
+
     // gcp_cloud_dns provider
     [YamlMember(Alias = "project")]
     public string? Project { get; set; }

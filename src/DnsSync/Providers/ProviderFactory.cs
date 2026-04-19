@@ -11,6 +11,12 @@ public static class ProviderFactory
 {
     public static IProvider Create(string name, ProviderConfig config, ILoggerFactory loggerFactory)
     {
+        var provider = CreateInner(name, config, loggerFactory);
+        return config.ReadOnly ? new ReadOnlyProviderGuard(provider, name) : provider;
+    }
+
+    private static IProvider CreateInner(string name, ProviderConfig config, ILoggerFactory loggerFactory)
+    {
         return config.Type.ToLowerInvariant() switch
         {
             "yaml" => new YamlProvider(
