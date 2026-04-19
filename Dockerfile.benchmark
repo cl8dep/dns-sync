@@ -1,0 +1,41 @@
+ARG DOTNET_RID=linux-arm64
+
+FROM mcr.microsoft.com/dotnet/sdk:10.0 AS build-dns-sync
+ARG DOTNET_RID
+WORKDIR /src
+COPY src/DnsSync/DnsSync.csproj src/DnsSync/
+RUN dotnet restore src/DnsSync/DnsSync.csproj
+COPY src/ src/
+RUN dotnet publish src/DnsSync \
+    -c Release \
+    -r ${DOTNET_RID} \
+    --self-contained true \
+    -p:PublishSingleFile=true \
+    -p:PublishReadyToRun=true \
+    -p:DebugType=none \
+    -p:DebugSymbols=false \
+    -o /app/publish
+
+FROM python:3.12-slim
+WORKDIR /benchmark
+
+ENV DEBIAN_FRONTEND=noninteractive
+
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    wget \
+    libicu-dev \
+    && rm -rf /var/lib/apt/lists/*
+
+RUN pip install --no-cache-dir octodns
+
+RUN wget -q https://github.com/sharkdp/hyperfine/releases/download/v1.18.0/hyperfine_1.18.0_arm64.deb \
+    && dpkg -i hyperfine_1.18.0_arm64.deb \
+    && rm hyperfine_1.18.0_arm64.deb
+
+COPY --from=build-dns-sync /app/publish/dns-sync /usr/local/bin/dns-sync
+RUN chmod +x /usr/local/bin/dns-sync
+
+COPY benchmark/ /benchmark/
+RUN chmod +x /benchmark/run.sh
+
+ENTRYPOINT ["/benchmark/run.sh"]
