@@ -41,3 +41,38 @@ zones:
   #   targets:
   #     - cloudflare
   #     - route53
+
+# ── Multi-instance providers ────────────────────────────────────────────────
+# You can define multiple instances of the same provider type under different
+# names. This lets you manage zones spread across multiple accounts or projects
+# from a single config file.
+#
+# Example: two Cloudflare accounts
+#
+# providers:
+#   cf_org1:
+#     type: cloudflare
+#     api_token: "${CF_TOKEN_ORG1}"
+#
+#   cf_org2:
+#     type: cloudflare
+#     api_token: "${CF_TOKEN_ORG2}"
+#
+# zones:
+#   example.com.:
+#     source: yaml_source
+#     targets:
+#       - cf_org1          # synced to account 1
+#
+#   other.com.:
+#     source: yaml_source
+#     targets:
+#       - cf_org2          # synced to account 2
+#
+# Cross-account sync (read from one account, write to another):
+#
+# zones:
+#   mirror.example.com.:
+#     source: cf_org1      # read from account 1
+#     targets:
+#       - cf_org2          # write to account 2

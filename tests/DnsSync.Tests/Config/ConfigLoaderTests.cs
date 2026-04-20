@@ -138,6 +138,163 @@ public class ConfigLoaderTests
         errors.ShouldContain(e => e.Contains("does_not_exist"));
     }
 
+    [Fact]
+    public void Load_MultipleInstancesSameType_ParsesBothProviders()
+    {
+        var config = Deserialize("""
+            providers:
+              cf_org1:
+                type: cloudflare
+                api_token: token-org1
+              cf_org2:
+                type: cloudflare
+                api_token: token-org2
+            zones:
+              example.com.:
+                source: cf_org1
+                targets:
+                  - cf_org2
+            """);
+
+        config.Providers.Count.ShouldBe(2);
+        config.Providers["cf_org1"].Type.ShouldBe("cloudflare");
+        config.Providers["cf_org1"].ApiToken.ShouldBe("token-org1");
+        config.Providers["cf_org2"].Type.ShouldBe("cloudflare");
+        config.Providers["cf_org2"].ApiToken.ShouldBe("token-org2");
+    }
+
+    [Fact]
+    public void Load_MultipleInstancesSameType_ParsesZoneMapping()
+    {
+        var config = Deserialize("""
+            providers:
+              cf_org1:
+                type: cloudflare
+                api_token: token-org1
+              cf_org2:
+                type: cloudflare
+                api_token: token-org2
+            zones:
+              example.com.:
+                source: cf_org1
+                targets:
+                  - cf_org2
+              other.com.:
+                source: cf_org2
+                targets:
+                  - cf_org1
+            """);
+
+        config.Zones.Count.ShouldBe(2);
+        config.Zones["example.com."].Source.ShouldBe("cf_org1");
+        config.Zones["example.com."].Targets.ShouldHaveSingleItem().ShouldBe("cf_org2");
+        config.Zones["other.com."].Source.ShouldBe("cf_org2");
+        config.Zones["other.com."].Targets.ShouldHaveSingleItem().ShouldBe("cf_org1");
+    }
+
+    [Fact]
+    public void ValidateStructure_MultipleInstancesSameType_ReturnsNoErrors()
+    {
+        var config = Deserialize("""
+            providers:
+              cf_org1:
+                type: cloudflare
+                api_token: token-org1
+              cf_org2:
+                type: cloudflare
+                api_token: token-org2
+            zones:
+              example.com.:
+                source: cf_org1
+                targets:
+                  - cf_org2
+            """);
+
+        var errors = ConfigLoader.ValidateStructure(config);
+        errors.ShouldBeEmpty();
+    }
+
+    [Fact]
+    public void ValidateStructure_CrossAccountSync_SourceFromOneTargetAnother_ReturnsNoErrors()
+    {
+        // Validates the cross-account pattern: read from cf_org1, write to cf_org2
+        var config = Deserialize("""
+            providers:
+              cf_org1:
+                type: cloudflare
+                api_token: token-org1
+              cf_org2:
+                type: cloudflare
+                api_token: token-org2
+            zones:
+              example.com.:
+                source: cf_org1
+                targets:
+                  - cf_org2
+              other.com.:
+                source: cf_org2
+                targets:
+                  - cf_org1
+            """);
+
+        var errors = ConfigLoader.ValidateStructure(config);
+        errors.ShouldBeEmpty();
+    }
+
+    [Fact]
+    public void ValidateStructure_SameInstanceAsSourceAndTarget_ReturnsError()
+    {
+        // Two Cloudflare instances — but one zone mistakenly uses same instance as source and target
+        var config = Deserialize("""
+            providers:
+              cf_org1:
+                type: cloudflare
+                api_token: token-org1
+              cf_org2:
+                type: cloudflare
+                api_token: token-org2
+            zones:
+              example.com.:
+                source: cf_org1
+                targets:
+                  - cf_org1
+            """);
+
+        var errors = ConfigLoader.ValidateStructure(config);
+        errors.ShouldContain(e => e.Contains("source and target"));
+    }
+
+    [Fact]
+    public void Load_MixedProviderTypes_ParseesAllInstances()
+    {
+        var config = Deserialize("""
+            providers:
+              yaml_source:
+                type: yaml
+                directory: ./zones
+              cf_org1:
+                type: cloudflare
+                api_token: token-org1
+              cf_org2:
+                type: cloudflare
+                api_token: token-org2
+            zones:
+              example.com.:
+                source: yaml_source
+                targets:
+                  - cf_org1
+                  - cf_org2
+            """);
+
+        config.Providers.Count.ShouldBe(3);
+        config.Zones["example.com."].Targets.Count.ShouldBe(2);
+        config.Zones["example.com."].Targets.ShouldContain("cf_org1");
+        config.Zones["example.com."].Targets.ShouldContain("cf_org2");
+
+        var errors = ConfigLoader.ValidateStructure(config);
+        errors.ShouldBeEmpty();
+    }
+
     private static DnsSyncConfig Deserialize(string yaml)
     {
         var tmp = Path.GetTempFileName();
