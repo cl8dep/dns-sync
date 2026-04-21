@@ -17,4 +17,8 @@ public class ApplySettings : PlanSettings
     [CommandOption("--force")]
     [Description("Override --max-changes safety limit")]
     public bool Force { get; set; }
+
+    [CommandOption("--from-plan <PATH>")]
+    [Description("Apply a previously saved plan file instead of re-reading providers (skips GetZone)")]
+    public string? FromPlan { get; set; }
 }

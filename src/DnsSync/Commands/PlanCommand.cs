@@ -1,5 +1,6 @@
 using System.Text.Json;
 using DnsSync.Core;
+using DnsSync.Plan;
 using DnsSync.Providers;
 using Microsoft.Extensions.Logging;
 using Spectre.Console;
@@ -26,6 +27,9 @@ public class PlanCommand(ILoggerFactory loggerFactory) : AsyncCommand<PlanSettin
 
             // JSON output accumulator
             var jsonZones = new List<object>();
+
+            // Accumulator for --save-plan
+            var savedZonePlans = new List<(string ZoneName, string TargetName, DnsPlan Plan)>();
 
             foreach (var (zoneName, zoneConfig) in config.Zones)
             {
@@ -102,6 +106,7 @@ public class PlanCommand(ILoggerFactory loggerFactory) : AsyncCommand<PlanSettin
                             CommandHelpers.PrintPlan(plan, zoneName, targetName, settings.Wide);
                         }
 
+                        savedZonePlans.Add((zoneName, targetName, plan));
                         totalChanges += plan.Total;
                     }
                     catch (Exception ex)
@@ -117,14 +122,22 @@ public class PlanCommand(ILoggerFactory loggerFactory) : AsyncCommand<PlanSettin
             if (jsonMode)
             {
                 Console.WriteLine(JsonSerializer.Serialize(jsonZones, new JsonSerializerOptions { WriteIndented = true }));
-                return hasErrors ? 1 : (settings.ExitCode && totalChanges > 0 ? 2 : 0);
+            }
+            else
+            {
+                if (totalChanges > 0)
+                    AnsiConsole.MarkupLine(
+                        $"\n[bold]{totalChanges} total change(s)[/] — run [bold]dns-sync apply[/] to apply.");
+                else if (!hasErrors)
+                    AnsiConsole.MarkupLine("\n[green]✓ All zones are in sync. No changes needed.[/]");
             }
 
-            if (totalChanges > 0)
-                AnsiConsole.MarkupLine(
-                    $"\n[bold]{totalChanges} total change(s)[/] — run [bold]dns-sync apply[/] to apply.");
-            else if (!hasErrors)
-                AnsiConsole.MarkupLine("\n[green]✓ All zones are in sync. No changes needed.[/]");
+            if (!hasErrors && settings.SavePlan is not null)
+            {
+                PlanFileSerializer.Save(settings.ConfigPath, savedZonePlans, settings.SavePlan);
+                if (!jsonMode)
+                    AnsiConsole.MarkupLine($"[green]✓[/] Plan saved to [bold]{Markup.Escape(settings.SavePlan)}[/]");
+            }
 
             return hasErrors ? 1 : (settings.ExitCode && totalChanges > 0 ? 2 : 0);
         }
