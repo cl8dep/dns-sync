@@ -21,4 +21,8 @@ public class PlanSettings : BaseSettings
     [Description("Output format: text (default) or json")]
     [DefaultValue("text")]
     public string Output { get; set; } = "text";
+
+    [CommandOption("--save-plan <PATH>")]
+    [Description("Save the computed plan to a signed YAML file for later use with 'apply --from-plan'")]
+    public string? SavePlan { get; set; }
 }
