@@ -18,6 +18,9 @@ config.yaml
 ## Zone files (local data, not for public repos)
 domains/
 
+## Local test fixtures
+local-test/
+
 ## OS
 .DS_Store
 Thumbs.db

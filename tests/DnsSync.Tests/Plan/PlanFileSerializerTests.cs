@@ -260,7 +260,7 @@ public class PlanFileSerializerTests
 
             Should.Throw<InvalidOperationException>(() =>
                 PlanFileSerializer.Load(configPath, planPath))
-                .Message.ShouldContain("Config file has changed");
+                .Message.ShouldContain("Config file has changed since this plan was generated");
         }
         finally { File.Delete(configPath); File.Delete(planPath); }
     }

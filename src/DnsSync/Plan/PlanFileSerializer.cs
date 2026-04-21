@@ -69,8 +69,7 @@ public static class PlanFileSerializer
 
         if (!string.Equals(file.Plan.ConfigHash, expectedConfigHash, StringComparison.Ordinal))
             throw new InvalidOperationException(
-                $"Config file has changed since this plan was generated. " +
-                $"Expected config hash {file.Plan.ConfigHash}, got {expectedConfigHash}. " +
+                "Config file has changed since this plan was generated. " +
                 "Re-run 'dns-sync plan --save-plan' to generate a fresh plan.");
 
         var bodyYaml = YamlSerializer.Serialize(file.Plan);
