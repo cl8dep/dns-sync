@@ -1,0 +1,289 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://raw.githubusercontent.com/cl8dep/dns-sync/main/schemas/zone.schema.json",
+  "title": "dns-sync Zone File",
+  "description": "Zone file format for dns-sync. Each key is a subdomain label (empty string or '@' for apex, relative labels like 'www', or absolute FQDNs ending with '.'). Each value is a single record object or a list of record objects.",
+  "type": "object",
+  "additionalProperties": {
+    "oneOf": [
+      { "$ref": "#/definitions/record" },
+      {
+        "type": "array",
+        "items": { "$ref": "#/definitions/record" },
+        "minItems": 1
+      }
+    ]
+  },
+  "definitions": {
+    "ttl": {
+      "type": "integer",
+      "minimum": 0,
+      "maximum": 2147483647,
+      "description": "Time to live in seconds. Defaults to 3600 if omitted."
+    },
+    "record": {
+      "oneOf": [
+        { "$ref": "#/definitions/ARecord" },
+        { "$ref": "#/definitions/AAAARecord" },
+        { "$ref": "#/definitions/CNAMERecord" },
+        { "$ref": "#/definitions/MXRecord" },
+        { "$ref": "#/definitions/TXTRecord" },
+        { "$ref": "#/definitions/NSRecord" },
+        { "$ref": "#/definitions/CAARecord" },
+        { "$ref": "#/definitions/SRVRecord" }
+      ]
+    },
+    "ARecord": {
+      "type": "object",
+      "description": "IPv4 address record.",
+      "required": ["type"],
+      "additionalProperties": false,
+      "properties": {
+        "type": { "type": "string", "const": "A" },
+        "ttl": { "$ref": "#/definitions/ttl" },
+        "values": {
+          "oneOf": [
+            {
+              "type": "string",
+              "description": "Single IPv4 address."
+            },
+            {
+              "type": "array",
+              "description": "One or more IPv4 addresses.",
+              "items": { "type": "string" },
+              "minItems": 1
+            }
+          ]
+        },
+        "value": {
+          "type": "string",
+          "description": "Single IPv4 address (alias for values)."
+        }
+      },
+      "anyOf": [
+        { "required": ["values"] },
+        { "required": ["value"] }
+      ]
+    },
+    "AAAARecord": {
+      "type": "object",
+      "description": "IPv6 address record.",
+      "required": ["type"],
+      "additionalProperties": false,
+      "properties": {
+        "type": { "type": "string", "const": "AAAA" },
+        "ttl": { "$ref": "#/definitions/ttl" },
+        "values": {
+          "oneOf": [
+            {
+              "type": "string",
+              "description": "Single IPv6 address."
+            },
+            {
+              "type": "array",
+              "description": "One or more IPv6 addresses.",
+              "items": { "type": "string" },
+              "minItems": 1
+            }
+          ]
+        },
+        "value": {
+          "type": "string",
+          "description": "Single IPv6 address (alias for values)."
+        }
+      },
+      "anyOf": [
+        { "required": ["values"] },
+        { "required": ["value"] }
+      ]
+    },
+    "CNAMERecord": {
+      "type": "object",
+      "description": "Canonical name alias. Must point to an FQDN (trailing dot recommended).",
+      "required": ["type"],
+      "additionalProperties": false,
+      "properties": {
+        "type": { "type": "string", "const": "CNAME" },
+        "ttl": { "$ref": "#/definitions/ttl" },
+        "value": {
+          "type": "string",
+          "description": "Target FQDN (e.g. 'api.backend.example.com.')."
+        },
+        "target": {
+          "type": "string",
+          "description": "Target FQDN — alias for 'value'."
+        }
+      },
+      "anyOf": [
+        { "required": ["value"] },
+        { "required": ["target"] }
+      ]
+    },
+    "MXRecord": {
+      "type": "object",
+      "description": "Mail exchanger record.",
+      "required": ["type", "values"],
+      "additionalProperties": false,
+      "properties": {
+        "type": { "type": "string", "const": "MX" },
+        "ttl": { "$ref": "#/definitions/ttl" },
+        "values": {
+          "type": "array",
+          "description": "List of mail exchangers.",
+          "items": { "$ref": "#/definitions/MXValue" },
+          "minItems": 1
+        }
+      }
+    },
+    "MXValue": {
+      "type": "object",
+      "required": ["exchange"],
+      "additionalProperties": false,
+      "properties": {
+        "preference": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 65535,
+          "description": "Priority — lower value = higher priority. Defaults to 10.",
+          "default": 10
+        },
+        "exchange": {
+          "type": "string",
+          "description": "Mail server FQDN (e.g. 'mail.example.com.')."
+        }
+      }
+    },
+    "TXTRecord": {
+      "type": "object",
+      "description": "Text record. Used for SPF, DKIM, DMARC, domain verification, and arbitrary text.",
+      "required": ["type"],
+      "additionalProperties": false,
+      "properties": {
+        "type": { "type": "string", "const": "TXT" },
+        "ttl": { "$ref": "#/definitions/ttl" },
+        "values": {
+          "oneOf": [
+            {
+              "type": "string",
+              "description": "Single TXT string."
+            },
+            {
+              "type": "array",
+              "description": "Multiple TXT strings (separate RRset entries).",
+              "items": { "type": "string" },
+              "minItems": 1
+            }
+          ]
+        },
+        "value": {
+          "type": "string",
+          "description": "Single TXT string (alias for values)."
+        }
+      },
+      "anyOf": [
+        { "required": ["values"] },
+        { "required": ["value"] }
+      ]
+    },
+    "NSRecord": {
+      "type": "object",
+      "description": "Name server record. Apex NS records are excluded from diffs by default — use --include-apex-ns to override.",
+      "required": ["type", "values"],
+      "additionalProperties": false,
+      "properties": {
+        "type": { "type": "string", "const": "NS" },
+        "ttl": { "$ref": "#/definitions/ttl" },
+        "values": {
+          "type": "array",
+          "description": "List of nameserver FQDNs.",
+          "items": { "type": "string" },
+          "minItems": 1
+        }
+      }
+    },
+    "CAARecord": {
+      "type": "object",
+      "description": "Certification Authority Authorization record. Controls which CAs may issue certificates for the domain.",
+      "required": ["type", "values"],
+      "additionalProperties": false,
+      "properties": {
+        "type": { "type": "string", "const": "CAA" },
+        "ttl": { "$ref": "#/definitions/ttl" },
+        "values": {
+          "type": "array",
+          "description": "List of CAA entries.",
+          "items": { "$ref": "#/definitions/CAAValue" },
+          "minItems": 1
+        }
+      }
+    },
+    "CAAValue": {
+      "type": "object",
+      "required": ["tag", "value"],
+      "additionalProperties": false,
+      "properties": {
+        "flags": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 255,
+          "description": "CAA flags byte. 0 = non-critical, 128 = critical. Defaults to 0.",
+          "default": 0
+        },
+        "tag": {
+          "type": "string",
+          "description": "CAA property tag.",
+          "enum": ["issue", "issuewild", "iodef"]
+        },
+        "value": {
+          "type": "string",
+          "description": "CA domain name for 'issue'/'issuewild', or mailto/URL for 'iodef'. Use ';' to deny all CAs."
+        }
+      }
+    },
+    "SRVRecord": {
+      "type": "object",
+      "description": "Service locator record. The subdomain key must follow the '_service._proto' convention (e.g. '_sip._tcp').",
+      "required": ["type", "values"],
+      "additionalProperties": false,
+      "properties": {
+        "type": { "type": "string", "const": "SRV" },
+        "ttl": { "$ref": "#/definitions/ttl" },
+        "values": {
+          "type": "array",
+          "description": "List of service endpoints.",
+          "items": { "$ref": "#/definitions/SRVValue" },
+          "minItems": 1
+        }
+      }
+    },
+    "SRVValue": {
+      "type": "object",
+      "required": ["priority", "weight", "port", "target"],
+      "additionalProperties": false,
+      "properties": {
+        "priority": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 65535,
+          "description": "Priority — lower value = higher priority."
+        },
+        "weight": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 65535,
+          "description": "Relative weight for load balancing among equal-priority entries."
+        },
+        "port": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 65535,
+          "description": "TCP or UDP port of the service."
+        },
+        "target": {
+          "type": "string",
+          "description": "FQDN of the host providing the service. Use '.' to signal unavailability."
+        }
+      }
+    }
+  }
+}
