@@ -31,7 +31,7 @@ It works like Terraform for DNS: `plan` shows what would change, `apply` makes i
 | Cloudflare | `cloudflare` | ✓ | ✓ |
 | GCP Cloud DNS | `gcp_cloud_dns` | ✓ | ✓ |
 | Porkbun | `porkbun` | ✓ | ✓ |
-| AWS Route 53 | `route53` | — | — (planned) |
+| AWS Route 53 | `route53` | ✓ | ✓ |
 
 **Supported record types:** A, AAAA, CNAME, MX, TXT, NS, CAA, SRV
 
