@@ -37,7 +37,7 @@ public class PlanFileSerializerTests
     private static (string ConfigPath, string PlanPath) WriteTempFiles(string configContent = "providers: {}")
     {
         var configPath = Path.GetTempFileName();
-        var planPath   = Path.GetTempFileName();
+        var planPath = Path.GetTempFileName();
         File.WriteAllText(configPath, configContent);
         return (configPath, planPath);
     }
@@ -131,7 +131,8 @@ public class PlanFileSerializerTests
     {
         var savedZone = new SavedZonePlan
         {
-            Zone = "example.com.", Target = "cf",
+            Zone = "example.com.",
+            Target = "cf",
             Changes =
             [
                 new SavedChange
@@ -156,7 +157,8 @@ public class PlanFileSerializerTests
     {
         var savedZone = new SavedZonePlan
         {
-            Zone = "example.com.", Target = "cf",
+            Zone = "example.com.",
+            Target = "cf",
             Changes =
             [
                 new SavedChange
@@ -181,7 +183,8 @@ public class PlanFileSerializerTests
     {
         var savedZone = new SavedZonePlan
         {
-            Zone = "example.com.", Target = "cf",
+            Zone = "example.com.",
+            Target = "cf",
             Changes =
             [
                 new SavedChange
@@ -206,7 +209,8 @@ public class PlanFileSerializerTests
     {
         var savedZone = new SavedZonePlan
         {
-            Zone = "example.com.", Target = "cf",
+            Zone = "example.com.",
+            Target = "cf",
             Changes =
             [
                 new SavedChange

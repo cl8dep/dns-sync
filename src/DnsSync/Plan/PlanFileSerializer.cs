@@ -97,7 +97,7 @@ public static class PlanFileSerializer
                 _ => throw new InvalidOperationException($"Unknown change type '{c.Type}' in plan file.")
             },
             Before = c.Before is null ? null : ToRecord(c.Name, c.RecordType, c.Before),
-            After  = c.After  is null ? null : ToRecord(c.Name, c.RecordType, c.After),
+            After = c.After is null ? null : ToRecord(c.Name, c.RecordType, c.After),
         }).ToList();
 
         return new DnsPlan { Changes = changes };
@@ -127,7 +127,7 @@ public static class PlanFileSerializer
             Name = c.RecordName,
             RecordType = c.RecordType,
             Before = c.Before is null ? null : ToSavedRecord(c.Before),
-            After  = c.After  is null ? null : ToSavedRecord(c.After),
+            After = c.After is null ? null : ToSavedRecord(c.After),
         };
 
     private static SavedRecord ToSavedRecord(DnsRecord record) =>
@@ -139,16 +139,16 @@ public static class PlanFileSerializer
 
     private static List<string> EncodeValues(DnsRecord record) => record switch
     {
-        ARecord r     => [..r.Addresses],
-        AaaaRecord r  => [..r.Addresses],
+        ARecord r => [.. r.Addresses],
+        AaaaRecord r => [.. r.Addresses],
         CnameRecord r => [r.Target],
-        NsRecord r    => [..r.Nameservers],
-        TxtRecord r   => [..r.Values],
-        MxRecord r    => r.Values.OrderBy(v => v.Preference)
+        NsRecord r => [.. r.Nameservers],
+        TxtRecord r => [.. r.Values],
+        MxRecord r => r.Values.OrderBy(v => v.Preference)
                             .Select(v => $"{v.Preference} {v.Exchange}").ToList(),
-        SrvRecord r   => r.Values.OrderBy(v => v.Priority)
+        SrvRecord r => r.Values.OrderBy(v => v.Priority)
                             .Select(v => $"{v.Priority} {v.Weight} {v.Port} {v.Target}").ToList(),
-        CaaRecord r   => r.Values.OrderBy(v => v.Tag)
+        CaaRecord r => r.Values.OrderBy(v => v.Tag)
                             .Select(v => $"{v.Flags} {v.Tag} {v.Value}").ToList(),
         _ => throw new InvalidOperationException($"Unsupported record type: {record.GetType().Name}")
     };
@@ -156,18 +156,38 @@ public static class PlanFileSerializer
     private static DnsRecord ToRecord(string name, string type, SavedRecord saved) =>
         type.ToUpperInvariant() switch
         {
-            "A"    => new ARecord    { Name = name, Type = type, Ttl = saved.Ttl, Addresses   = saved.Values },
-            "AAAA" => new AaaaRecord { Name = name, Type = type, Ttl = saved.Ttl, Addresses   = saved.Values },
-            "NS"   => new NsRecord   { Name = name, Type = type, Ttl = saved.Ttl, Nameservers = saved.Values },
-            "TXT"  => new TxtRecord  { Name = name, Type = type, Ttl = saved.Ttl, Values      = saved.Values },
-            "CNAME" => new CnameRecord { Name = name, Type = type, Ttl = saved.Ttl,
-                           Target = saved.Values.FirstOrDefault() ?? string.Empty },
-            "MX" => new MxRecord { Name = name, Type = type, Ttl = saved.Ttl,
-                        Values = saved.Values.Select(ParseMx).ToList() },
-            "SRV" => new SrvRecord { Name = name, Type = type, Ttl = saved.Ttl,
-                         Values = saved.Values.Select(ParseSrv).ToList() },
-            "CAA" => new CaaRecord { Name = name, Type = type, Ttl = saved.Ttl,
-                         Values = saved.Values.Select(ParseCaa).ToList() },
+            "A" => new ARecord { Name = name, Type = type, Ttl = saved.Ttl, Addresses = saved.Values },
+            "AAAA" => new AaaaRecord { Name = name, Type = type, Ttl = saved.Ttl, Addresses = saved.Values },
+            "NS" => new NsRecord { Name = name, Type = type, Ttl = saved.Ttl, Nameservers = saved.Values },
+            "TXT" => new TxtRecord { Name = name, Type = type, Ttl = saved.Ttl, Values = saved.Values },
+            "CNAME" => new CnameRecord
+            {
+                Name = name,
+                Type = type,
+                Ttl = saved.Ttl,
+                Target = saved.Values.FirstOrDefault() ?? string.Empty
+            },
+            "MX" => new MxRecord
+            {
+                Name = name,
+                Type = type,
+                Ttl = saved.Ttl,
+                Values = saved.Values.Select(ParseMx).ToList()
+            },
+            "SRV" => new SrvRecord
+            {
+                Name = name,
+                Type = type,
+                Ttl = saved.Ttl,
+                Values = saved.Values.Select(ParseSrv).ToList()
+            },
+            "CAA" => new CaaRecord
+            {
+                Name = name,
+                Type = type,
+                Ttl = saved.Ttl,
+                Values = saved.Values.Select(ParseCaa).ToList()
+            },
             _ => throw new InvalidOperationException($"Unsupported record type in plan file: {type}")
         };
 

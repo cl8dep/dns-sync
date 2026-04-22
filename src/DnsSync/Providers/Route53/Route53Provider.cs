@@ -251,22 +251,30 @@ public class Route53Provider : IProvider
         {
             "A" => new ARecord
             {
-                Name = name, Type = "A", Ttl = ttl,
+                Name = name,
+                Type = "A",
+                Ttl = ttl,
                 Addresses = values
             },
             "AAAA" => new AaaaRecord
             {
-                Name = name, Type = "AAAA", Ttl = ttl,
+                Name = name,
+                Type = "AAAA",
+                Ttl = ttl,
                 Addresses = values
             },
             "CNAME" => new CnameRecord
             {
-                Name = name, Type = "CNAME", Ttl = ttl,
+                Name = name,
+                Type = "CNAME",
+                Ttl = ttl,
                 Target = DnsNameHelper.NormalizeFqdn(values[0])
             },
             "MX" => new MxRecord
             {
-                Name = name, Type = "MX", Ttl = ttl,
+                Name = name,
+                Type = "MX",
+                Ttl = ttl,
                 Values = values.Select(v =>
                 {
                     var parts = v.Split(' ', 2);
@@ -277,17 +285,23 @@ public class Route53Provider : IProvider
             },
             "TXT" => new TxtRecord
             {
-                Name = name, Type = "TXT", Ttl = ttl,
+                Name = name,
+                Type = "TXT",
+                Ttl = ttl,
                 Values = values.Select(StripTxtQuotes).ToList()
             },
             "NS" => new NsRecord
             {
-                Name = name, Type = "NS", Ttl = ttl,
+                Name = name,
+                Type = "NS",
+                Ttl = ttl,
                 Nameservers = values.Select(DnsNameHelper.NormalizeFqdn).ToList()
             },
             "CAA" => new CaaRecord
             {
-                Name = name, Type = "CAA", Ttl = ttl,
+                Name = name,
+                Type = "CAA",
+                Ttl = ttl,
                 Values = values.Select(v =>
                 {
                     var parts = v.Split(' ', 3);
@@ -299,7 +313,9 @@ public class Route53Provider : IProvider
             },
             "SRV" => new SrvRecord
             {
-                Name = name, Type = "SRV", Ttl = ttl,
+                Name = name,
+                Type = "SRV",
+                Ttl = ttl,
                 Values = values.Select(v =>
                 {
                     var parts = v.Split(' ', 4);
