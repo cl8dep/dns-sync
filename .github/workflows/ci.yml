@@ -40,4 +40,4 @@ jobs:
           retention-days: 14
 
       - name: Validate zone JSON Schema
-        run: npx --yes ajv-cli@5 validate-schema -s schemas/zone.schema.json
+        run: npx --yes ajv-cli@5 compile -s schemas/zone.schema.json
