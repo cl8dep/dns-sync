@@ -34,7 +34,7 @@ public class ProviderConfig
     [YamlMember(Alias = "secret_key")]
     public string? SecretKey { get; set; }
 
-    // route53 (future)
+    // route53 provider
     [YamlMember(Alias = "access_key_id")]
     public string? AccessKeyId { get; set; }
 
@@ -43,6 +43,9 @@ public class ProviderConfig
 
     [YamlMember(Alias = "region")]
     public string? Region { get; set; }
+
+    [YamlMember(Alias = "hosted_zone_id")]
+    public string? HostedZoneId { get; set; }
 
     [YamlMember(Alias = "readonly")]
     public bool ReadOnly { get; set; }
