@@ -166,7 +166,7 @@ public class YamlProvider(string directory) : IProvider
                 Name = fqdn,
                 Type = "TXT",
                 Ttl = ttl,
-                Values = GetStringList(def, "values", "value")
+                Values = GetStringList(def, "values", "value").Select(UnescapeTxt).ToList()
             },
             "NS" => new NsRecord
             {
@@ -211,6 +211,12 @@ public class YamlProvider(string directory) : IProvider
 
         return [];
     }
+
+    /// <summary>
+    /// Some providers (octodns, Porkbun) escape semicolons as \; in TXT record values.
+    /// Normalize to plain semicolons so all downstream providers receive clean values.
+    /// </summary>
+    private static string UnescapeTxt(string value) => value.Replace("\\;", ";");
 
     private static IReadOnlyList<MxValue> GetMxValues(Dictionary<object, object> def)
     {
