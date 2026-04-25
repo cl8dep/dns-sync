@@ -8,6 +8,21 @@ namespace DnsSync.Tests.Providers.Cloudflare;
 
 public class CloudflareParsingTests
 {
+    // CloudflareProvider.StripTxtQuotes is private — test via ParseZoneYaml or directly via reflection
+    // Instead we test the public behaviour through the internal static helper exposed for tests.
+    // We use the public GcpCloudDnsProvider.UnquoteTxt as reference and test Cloudflare
+    // parsing by constructing a minimal provider and exercising ParseCloudflareRecord via
+    // the existing MergeIntoRRsets path through GetZoneAsync is impractical without HTTP mocks.
+    // We therefore test StripTxtQuotes indirectly through the CloudflareProvider's parsing
+    // by calling it through the non-public method via reflection.
+
+    private static string InvokeStripTxtQuotes(string input)
+    {
+        var method = typeof(CloudflareProvider)
+            .GetMethod("StripTxtQuotes",
+                System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static)!;
+        return (string)method.Invoke(null, [input])!;
+    }
 
     private static JsonElement MakeRecord(string type, string name, int ttl, string content,
         int? priority = null, string? data = null)
@@ -43,46 +58,46 @@ public class CloudflareParsingTests
         return (DnsRecord?)method.Invoke(provider, [el, zoneName]);
     }
 
-    // ─── TxtRecord.ParseTxtContent ────────────────────────────────────────────
+    // ─── StripTxtQuotes ───────────────────────────────────────────────────────
 
     [Fact]
-    public void ParseTxtContent_SimpleSingleChunk_ReturnsPlainString()
+    public void StripTxtQuotes_SimpleSingleChunk_ReturnsPlainString()
     {
-        TxtRecord.ParseTxtContent("\"v=spf1 include:example.com ~all\"")
+        InvokeStripTxtQuotes("\"v=spf1 include:example.com ~all\"")
             .ShouldBe("v=spf1 include:example.com ~all");
     }
 
     [Fact]
-    public void ParseTxtContent_TwoChunks_JoinsChunks()
+    public void StripTxtQuotes_TwoChunks_JoinsChunks()
     {
-        TxtRecord.ParseTxtContent("\"chunk1\" \"chunk2\"")
+        InvokeStripTxtQuotes("\"chunk1\" \"chunk2\"")
             .ShouldBe("chunk1chunk2");
     }
 
     [Fact]
-    public void ParseTxtContent_EscapedQuoteInsideChunk_IsPreserved()
+    public void StripTxtQuotes_EscapedQuoteInsideChunk_IsPreserved()
     {
-        TxtRecord.ParseTxtContent("\"hello \\\"world\\\"\"")
+        InvokeStripTxtQuotes("\"hello \\\"world\\\"\"")
             .ShouldBe("hello \"world\"");
     }
 
     [Fact]
-    public void ParseTxtContent_UnquotedSingleToken_ReturnedAsIs()
+    public void StripTxtQuotes_UnquotedSingleToken_ReturnedAsIs()
     {
-        TxtRecord.ParseTxtContent("plainvalue")
+        InvokeStripTxtQuotes("plainvalue")
             .ShouldBe("plainvalue");
     }
 
     [Fact]
-    public void ParseTxtContent_EmptyString_ReturnsEmpty()
+    public void StripTxtQuotes_EmptyString_ReturnsEmpty()
     {
-        TxtRecord.ParseTxtContent("\"\"").ShouldBe("");
+        InvokeStripTxtQuotes("\"\"").ShouldBe("");
     }
 
     [Fact]
-    public void ParseTxtContent_BackslashEscape_IsHandled()
+    public void StripTxtQuotes_BackslashEscape_IsHandled()
     {
-        TxtRecord.ParseTxtContent("\"back\\\\slash\"").ShouldBe("back\\slash");
+        InvokeStripTxtQuotes("\"back\\\\slash\"").ShouldBe("back\\slash");
     }
 
     // ─── Record parsing ───────────────────────────────────────────────────────
