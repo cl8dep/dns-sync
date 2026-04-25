@@ -74,7 +74,7 @@ public class YamlProvider(string directory) : IProvider
         var raw = deserializer.Deserialize<Dictionary<string, object>>(yaml)
                   ?? new Dictionary<string, object>();
 
-        var records = new List<DnsRecord>();
+        var flat = new List<DnsRecord>();
 
         foreach (var (subdomain, value) in raw)
         {
@@ -85,11 +85,78 @@ public class YamlProvider(string directory) : IProvider
             {
                 var record = ParseRecordDef(def, fqdn);
                 if (record is not null)
-                    records.Add(record);
+                    flat.Add(record);
             }
         }
 
-        return records;
+        return MergeIntoRRsets(flat);
+    }
+
+    internal static IReadOnlyList<DnsRecord> MergeIntoRRsets(List<DnsRecord> flat)
+    {
+        var merged = new List<DnsRecord>();
+        foreach (var group in flat.GroupBy(r => (r.Name, r.Type)))
+        {
+            var records = group.ToList();
+            if (records.Count == 1) { merged.Add(records[0]); continue; }
+
+            var first = records[0];
+            DnsRecord rrset = first switch
+            {
+                ARecord => new ARecord
+                {
+                    Name = first.Name,
+                    Type = first.Type,
+                    Ttl = first.Ttl,
+                    Addresses = records.Cast<ARecord>().SelectMany(r => r.Addresses).ToList()
+                },
+                AaaaRecord => new AaaaRecord
+                {
+                    Name = first.Name,
+                    Type = first.Type,
+                    Ttl = first.Ttl,
+                    Addresses = records.Cast<AaaaRecord>().SelectMany(r => r.Addresses).ToList()
+                },
+                MxRecord => new MxRecord
+                {
+                    Name = first.Name,
+                    Type = first.Type,
+                    Ttl = first.Ttl,
+                    Values = records.Cast<MxRecord>().SelectMany(r => r.Values).ToList()
+                },
+                TxtRecord => new TxtRecord
+                {
+                    Name = first.Name,
+                    Type = first.Type,
+                    Ttl = first.Ttl,
+                    Values = records.Cast<TxtRecord>().SelectMany(r => r.Values).ToList()
+                },
+                NsRecord => new NsRecord
+                {
+                    Name = first.Name,
+                    Type = first.Type,
+                    Ttl = first.Ttl,
+                    Nameservers = records.Cast<NsRecord>().SelectMany(r => r.Nameservers).ToList()
+                },
+                CaaRecord => new CaaRecord
+                {
+                    Name = first.Name,
+                    Type = first.Type,
+                    Ttl = first.Ttl,
+                    Values = records.Cast<CaaRecord>().SelectMany(r => r.Values).ToList()
+                },
+                SrvRecord => new SrvRecord
+                {
+                    Name = first.Name,
+                    Type = first.Type,
+                    Ttl = first.Ttl,
+                    Values = records.Cast<SrvRecord>().SelectMany(r => r.Values).ToList()
+                },
+                _ => first
+            };
+            merged.Add(rrset);
+        }
+        return merged;
     }
 
     /// <summary>

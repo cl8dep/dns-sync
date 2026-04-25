@@ -1,0 +1,247 @@
+# Zone: heva.co.
+# Imported by dns-sync on 2026-04-19 17:11:15 UTC from cloudflare
+
+'':
+  -
+    type: A
+    ttl: 300
+    value: 34.96.112.216
+  -
+    type: MX
+    ttl: 3600
+    values:
+      - {preference: 1, exchange: smtp.google.com.}
+  -
+    type: NS
+    ttl: 300
+    values:
+      - ns-cloud-d4.googledomains.com.
+      - ns-cloud-d3.googledomains.com.
+      - ns-cloud-d2.googledomains.com.
+      - ns-cloud-d1.googledomains.com.
+  -
+    type: TXT
+    ttl: 300
+    values:
+      - "v=spf1 include:_spf.google.com include:_spf.firebasemail.com ~all"
+      - uber-domain-verification=5b8fd661-8bc2-4b7d-a3d0-777bba67755a
+      - tiktok-developers-site-verification=XJUA5nuvD9EqQ9tWQAK78QtwWbcB7OK0
+      - stripe-verification=6C664136B765A63B35383BF515974A7D6C24510BD87BD62285CAF9CC912DFF3F
+      - openai-domain-verification=dv-XyiWoUw7t4ie9vJF82sIQ0dF
+      - notion-domain-verification=uaWYNyjfBbh8qt70GpdmBAtrdzpkPpziIepz0zlUaoZ
+      - google-site-verification=ls71TWYPNrPxL_WOTbJc4UIS2L8X8wX82wrkAE0m-k4
+      - google-site-verification=8AvbVEgBRrnhQN_ygdoW9zIQHDTFZ-JtK7bMlk4_klk
+      - firebase=heva-prd
+      - apple-domain-verification=DcklGIv8sRHIH7wm
+      - anthropic-domain-verification-v0pr31=AtnWpfZMVOmo4EybU8oUKegXe
+
+_acme-challenge:
+  type: CNAME
+  ttl: 300
+  value: 0b8ada0e-5d72-4e4e-83e9-86def1051926.14.authorize.certificatemanager.goog.
+
+_acme-challenge.api2:
+  type: CNAME
+  ttl: 300
+  value: 62a8360d-f3d9-469d-85c6-721831437d87.13.authorize.certificatemanager.goog.
+
+_acme-challenge.app:
+  type: CNAME
+  ttl: 300
+  value: c09d8f67-972f-4f33-8607-6f88c2275bdf.19.authorize.certificatemanager.goog.
+
+_acme-challenge.internal:
+  type: CNAME
+  ttl: 300
+  value: 2eadad54-0674-4e40-8565-79bf27773c23.10.authorize.certificatemanager.goog.
+
+_acme-challenge.provider:
+  type: CNAME
+  ttl: 300
+  value: 2e24fcaf-7bf2-4be4-88d0-2e200e16ab53.13.authorize.certificatemanager.goog.
+
+_dmarc:
+  type: TXT
+  ttl: 3600
+  value: "v=DMARC1; p=none;"
+
+_domainconnect:
+  type: CNAME
+  ttl: 3600
+  value: _domainconnect.gd.domaincontrol.com.
+
+_gh-heva-co-o:
+  type: TXT
+  ttl: 3600
+  value: bd27ece117
+
+_twilio:
+  type: TXT
+  ttl: 3600
+  value: twilio-domain-verification=822d43e1392dfe75127e73cb98ea2570
+
+50945192:
+  type: CNAME
+  ttl: 3600
+  value: sendgrid.net.
+
+52796016:
+  type: CNAME
+  ttl: 3600
+  value: sendgrid.net.
+
+api:
+  type: A
+  ttl: 300
+  value: 34.96.112.216
+
+api2:
+  type: A
+  ttl: 300
+  value: 35.244.151.233
+
+app:
+  -
+    type: A
+    ttl: 300
+    value: 35.244.151.233
+  -
+    type: TXT
+    ttl: 3600
+    value: google-site-verification=l292cG96mkku7Eq9ShKnIDQiDm2Rkb76WZT06agG8AE
+
+app.onboarding:
+  type: A
+  ttl: 300
+  value: 34.96.112.216
+
+dashboard:
+  type: A
+  ttl: 300
+  value: 34.96.112.216
+
+em8680:
+  type: CNAME
+  ttl: 3600
+  value: u52796016.wl017.sendgrid.net.
+
+em9400:
+  type: CNAME
+  ttl: 3600
+  value: u50945192.wl193.sendgrid.net.
+
+firebase1._domainkey:
+  type: CNAME
+  ttl: 300
+  value: mail-heva-co.dkim1._domainkey.firebasemail.com.
+
+firebase2._domainkey:
+  type: CNAME
+  ttl: 300
+  value: mail-heva-co.dkim2._domainkey.firebasemail.com.
+
+google._domainkey:
+  type: TXT
+  ttl: 3600
+  value: "v=DKIM1; k=rsa; p=MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAxPHBlGDg3MFMozfF+7vwmvEnHYl5rlfm+F6gRTZ8eDCHHKneImb2vPq5JQj4KcO3nM8d05jPn08YJH4BASwXw5YES5cA+esUmRAscMRHDuKo262pf6Z3u9x9haJMI9+jVNKOGeTIGt5B1eBjs1rG2Qhyl0f219Xkygtr6MzFhmjSr9WXrpIS6inJAQkJ980q8Lk6jjnwXFlXXdXFiyHwR5Zz6JJ+sgcN3MnQEGYr5J6BN2JiJG8r5DA8/2/13Izuo4lVrsbiksI3aoqNuCiKVUxL8i6n7Vk/Z7hbg+bULYbl42O9MgUIuQTHv1P+eCT+I0/ZMHy5mOgRFMhfPXow/QIDAQAB"
+
+metabase:
+  type: A
+  ttl: 300
+  value: 34.96.112.216
+
+monitoring:
+  type: A
+  ttl: 300
+  value: 34.96.112.216
+
+onboarding:
+  type: A
+  ttl: 300
+  value: 34.96.112.216
+
+passwords:
+  type: A
+  ttl: 300
+  value: 34.96.112.216
+
+pay:
+  type: CNAME
+  ttl: 3600
+  value: paylinks.commerce.godaddy.com.
+
+provider:
+  type: A
+  ttl: 300
+  value: 35.244.151.233
+
+resend._domainkey:
+  type: TXT
+  ttl: 3600
+  value: p=MIGfMA0GCSqGSIb3DQEBAQUAA4GNADCBiQKBgQCj601itx6D97iqtBLnxWz40WIzcSL/sLk1wgS1zAHz4rahCi7Pv2wII+daCCwraAGm+IopeQnqqf4TqMx+1u5pLWS2MPC/H/DPiSsjzGqalYcYkEZBjzFy17XohUtxRKuSbO84U/zKrFbi6AAaRPOioyJ4bDNyKFbdA2e5qJS4VQIDAQAB
+
+s1._domainkey:
+  type: CNAME
+  ttl: 3600
+  value: s1.domainkey.u50945192.wl193.sendgrid.net.
+
+s2._domainkey:
+  type: CNAME
+  ttl: 3600
+  value: s2.domainkey.u50945192.wl193.sendgrid.net.
+
+sales:
+  type: A
+  ttl: 300
+  value: 34.96.112.216
+
+send:
+  -
+    type: MX
+    ttl: 3600
+    values:
+      - {preference: 10, exchange: feedback-smtp.us-east-1.amazonses.com.}
+  -
+    type: TXT
+    ttl: 3600
+    value: "v=spf1 include:amazonses.com ~all"
+
+sentry:
+  type: A
+  ttl: 300
+  value: 34.54.13.197
+
+status:
+  type: A
+  ttl: 300
+  value: 34.54.13.197
+
+url368:
+  type: CNAME
+  ttl: 3600
+  value: sendgrid.net.
+
+url613:
+  type: CNAME
+  ttl: 3600
+  value: sendgrid.net.
+
+url9341:
+  type: CNAME
+  ttl: 3600
+  value: sendgrid.net.
+
+vpn:
+  type: A
+  ttl: 3600
+  value: 35.232.202.249
+
+wallet:
+  type: A
+  ttl: 300
+  value: 35.244.151.233
+
+www:
+  type: CNAME
+  ttl: 3600
+  value: heva.co.

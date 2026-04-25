@@ -183,6 +183,28 @@ public class YamlProviderTests
     }
 
     [Fact]
+    public void ParseZoneYaml_MultipleTxtRecordsSameName_MergedIntoSingleRRset()
+    {
+        var yaml = """
+            '':
+              - type: TXT
+                ttl: 600
+                value: "v=spf1 include:icloud.com ~all"
+              - type: TXT
+                ttl: 600
+                value: "apple-domain=Y6ghd3wxkTr17fu3"
+            """;
+
+        var records = YamlProvider.ParseZoneYaml(yaml, "example.com.");
+
+        records.Count.ShouldBe(1);
+        var txt = records[0].ShouldBeOfType<TxtRecord>();
+        txt.Values.Count.ShouldBe(2);
+        txt.Values.ShouldContain("v=spf1 include:icloud.com ~all");
+        txt.Values.ShouldContain("apple-domain=Y6ghd3wxkTr17fu3");
+    }
+
+    [Fact]
     public void ParseZoneYaml_MxDotOnlyExchange_FailsValidation()
     {
         var yaml = """
