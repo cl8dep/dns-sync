@@ -145,6 +145,24 @@ public class PorkbunParsingTests
     }
 
     [Fact]
+    public void ParsePorkbunRecord_TxtRecord_MultiChunkJoined()
+    {
+        var el = MakeRecord("TXT", "example.com", "\"chunk1\" \"chunk2\"");
+        var record = PorkbunProvider.ParsePorkbunRecord(el, Zone) as TxtRecord;
+        record.ShouldNotBeNull();
+        record.Values[0].ShouldBe("chunk1chunk2");
+    }
+
+    [Fact]
+    public void ParsePorkbunRecord_TxtRecord_BackslashEscapeHandled()
+    {
+        var el = MakeRecord("TXT", "example.com", "\"val\\;ue\"");
+        var record = PorkbunProvider.ParsePorkbunRecord(el, Zone) as TxtRecord;
+        record.ShouldNotBeNull();
+        record.Values[0].ShouldBe("val;ue");
+    }
+
+    [Fact]
     public void ParsePorkbunRecord_UnknownType_ReturnsNull()
     {
         var el = MakeRecord("TLSA", "example.com", "0 0 1 abc123");
