@@ -87,9 +87,9 @@ public static class ZoneValidator
                     foreach (var v in mx.Values)
                     {
                         if (string.IsNullOrWhiteSpace(v.Exchange) || v.Exchange == ".")
-                            result.AddError($"{record.Name} MX: exchange value is empty");
+                            result.AddError($"{record.Name} MX (priority {v.Preference}): exchange value is empty");
                         else if (!IsValidHostname(v.Exchange))
-                            result.AddError($"{record.Name} MX: '{v.Exchange}' is not a valid hostname");
+                            result.AddError($"{record.Name} MX (priority {v.Preference}): '{v.Exchange}' is not a valid hostname");
                         if (v.Preference is < 0 or > 65535)
                             result.AddError($"{record.Name} MX: priority {v.Preference} is out of range (0–65535)");
                     }
