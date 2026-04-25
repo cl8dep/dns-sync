@@ -53,6 +53,8 @@ public class ApplyCommand(ILoggerFactory loggerFactory) : AsyncCommand<ApplySett
                 else
                     sourceZone = await sourceProvider.GetZoneAsync(zoneName, cancellationToken);
 
+                CommandHelpers.ValidateSourceZone(sourceZone, zoneConfig.Source);
+
                 foreach (var targetName in zoneConfig.Targets)
                 {
                     var targetProvider = ProviderFactory.Create(

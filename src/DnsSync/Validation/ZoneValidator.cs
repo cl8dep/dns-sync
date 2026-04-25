@@ -84,6 +84,15 @@ public static class ZoneValidator
                 case MxRecord mx:
                     if (mx.Values.Count == 0)
                         result.AddError($"{record.Name} MX: no values defined");
+                    foreach (var v in mx.Values)
+                    {
+                        if (string.IsNullOrWhiteSpace(v.Exchange) || v.Exchange == ".")
+                            result.AddError($"{record.Name} MX (priority {v.Preference}): exchange value is empty");
+                        else if (!IsValidHostname(v.Exchange))
+                            result.AddError($"{record.Name} MX (priority {v.Preference}): '{v.Exchange}' is not a valid hostname");
+                        if (v.Preference is < 0 or > 65535)
+                            result.AddError($"{record.Name} MX: priority {v.Preference} is out of range (0–65535)");
+                    }
                     types.Add("MX");
                     break;
 

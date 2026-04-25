@@ -62,6 +62,8 @@ public class PlanCommand(ILoggerFactory loggerFactory) : AsyncCommand<PlanSettin
                     sourceZone = await sourceProvider.GetZoneAsync(zoneName, cancellationToken);
                 }
 
+                CommandHelpers.ValidateSourceZone(sourceZone, zoneConfig.Source);
+
                 foreach (var targetName in zoneConfig.Targets)
                 {
                     var targetProvider = ProviderFactory.Create(

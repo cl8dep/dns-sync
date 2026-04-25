@@ -1,5 +1,6 @@
 using DnsSync.Config;
 using DnsSync.Core;
+using DnsSync.Validation;
 using Spectre.Console;
 
 namespace DnsSync.Commands;
@@ -37,6 +38,24 @@ public static class CommandHelpers
             $"[green]✓[/] Config valid ([bold]{zoneCount}[/] zone(s), [bold]{providerCount}[/] provider(s))");
 
         return config;
+    }
+
+    /// <summary>
+    /// Validates a source zone's records and throws if any errors are found.
+    /// Warnings are printed but do not abort.
+    /// </summary>
+    public static void ValidateSourceZone(DnsZone zone, string sourceName)
+    {
+        var result = ZoneValidator.Validate(zone);
+        foreach (var w in result.Warnings)
+            AnsiConsole.MarkupLine($"  [yellow]⚠[/] {Markup.Escape(w)}");
+        if (!result.IsValid)
+        {
+            foreach (var e in result.Errors)
+                AnsiConsole.MarkupLine($"  [red]✗[/] {Markup.Escape(e)}");
+            throw new InvalidOperationException(
+                $"Zone '{zone.Name}' from source '{sourceName}' has {result.Errors.Count} validation error(s). Fix the zone file and retry.");
+        }
     }
 
     public static void PrintPlan(DnsPlan plan, string zoneName, string targetName, bool wide = false)
