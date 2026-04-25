@@ -116,6 +116,17 @@ public class RecordNormalizationTests
         withDot.CanonicalHash().ShouldBe(withoutDot.CanonicalHash());
     }
 
+    [Theory]
+    [InlineData("v=spf1 ~all", "v=spf1 ~all")]
+    [InlineData("\"v=spf1 ~all\"", "v=spf1 ~all")]
+    [InlineData("\"chunk1\" \"chunk2\"", "chunk1chunk2")]
+    [InlineData("\"val\\;ue\"", "val;ue")]
+    [InlineData("\"a\" \"b\" \"c\"", "abc")]
+    public void TxtRecord_ParseTxtContent_NormalizesCorrectly(string input, string expected)
+    {
+        TxtRecord.ParseTxtContent(input).ShouldBe(expected);
+    }
+
     [Fact]
     public void CaaRecord_CanonicalHash_IsOrderIndependent()
     {
