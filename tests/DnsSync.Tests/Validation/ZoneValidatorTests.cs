@@ -294,4 +294,114 @@ public class ZoneValidatorTests
         result.IsValid.ShouldBeFalse();
         result.Errors.ShouldContain(e => e.Contains("SRV") && e.Contains("port") && e.Contains("out of range"));
     }
+
+    [Fact]
+    public void Validate_MxEmptyExchange_ReturnsError()
+    {
+        var zone = ZoneWith(new MxRecord
+        {
+            Name = "example.com.",
+            Type = "MX",
+            Ttl = 600,
+            Values = [new MxValue(10, "")]
+        });
+
+        var result = ZoneValidator.Validate(zone);
+
+        result.IsValid.ShouldBeFalse();
+        result.Errors.ShouldContain(e => e.Contains("MX") && e.Contains("exchange") && e.Contains("empty"));
+    }
+
+    [Fact]
+    public void Validate_MxDotOnlyExchange_ReturnsError()
+    {
+        var zone = ZoneWith(new MxRecord
+        {
+            Name = "example.com.",
+            Type = "MX",
+            Ttl = 600,
+            Values = [new MxValue(10, ".")]
+        });
+
+        var result = ZoneValidator.Validate(zone);
+
+        result.IsValid.ShouldBeFalse();
+        result.Errors.ShouldContain(e => e.Contains("MX") && e.Contains("exchange") && e.Contains("empty"));
+    }
+
+    [Fact]
+    public void Validate_MxInvalidHostname_ReturnsError()
+    {
+        var zone = ZoneWith(new MxRecord
+        {
+            Name = "example.com.",
+            Type = "MX",
+            Ttl = 600,
+            Values = [new MxValue(10, "-bad.example.com.")]
+        });
+
+        var result = ZoneValidator.Validate(zone);
+
+        result.IsValid.ShouldBeFalse();
+        result.Errors.ShouldContain(e => e.Contains("MX") && e.Contains("not a valid hostname"));
+    }
+
+    [Fact]
+    public void Validate_MxOutOfRangePriority_ReturnsError()
+    {
+        var zone = ZoneWith(new MxRecord
+        {
+            Name = "example.com.",
+            Type = "MX",
+            Ttl = 600,
+            Values = [new MxValue(70000, "mail.example.com.")]
+        });
+
+        var result = ZoneValidator.Validate(zone);
+
+        result.IsValid.ShouldBeFalse();
+        result.Errors.ShouldContain(e => e.Contains("MX") && e.Contains("priority") && e.Contains("out of range"));
+    }
+
+    [Fact]
+    public void Validate_MxOneInvalidValueAmongMany_ReportsOnlyThatOne()
+    {
+        var zone = ZoneWith(new MxRecord
+        {
+            Name = "example.com.",
+            Type = "MX",
+            Ttl = 600,
+            Values =
+            [
+                new MxValue(10, "mail.example.com."),
+                new MxValue(20, ".")
+            ]
+        });
+
+        var result = ZoneValidator.Validate(zone);
+
+        result.IsValid.ShouldBeFalse();
+        result.Errors.Count.ShouldBe(1);
+        result.Errors[0].ShouldContain("exchange");
+    }
+
+    [Fact]
+    public void Validate_MxValidValues_IsValid()
+    {
+        var zone = ZoneWith(new MxRecord
+        {
+            Name = "example.com.",
+            Type = "MX",
+            Ttl = 600,
+            Values =
+            [
+                new MxValue(10, "mx1.example.com."),
+                new MxValue(20, "mx2.example.com.")
+            ]
+        });
+
+        var result = ZoneValidator.Validate(zone);
+
+        result.IsValid.ShouldBeTrue();
+    }
 }

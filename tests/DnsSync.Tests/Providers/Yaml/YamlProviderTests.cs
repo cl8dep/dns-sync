@@ -1,5 +1,6 @@
 using DnsSync.Core.Records;
 using DnsSync.Providers.Yaml;
+using DnsSync.Validation;
 using Shouldly;
 
 namespace DnsSync.Tests.Providers.Yaml;
@@ -179,5 +180,66 @@ public class YamlProviderTests
 
         records.Count.ShouldBe(1);
         records[0].Name.ShouldBe("api.example.com.");  // not api.example.com..example.com.
+    }
+
+    [Fact]
+    public void ParseZoneYaml_MxDotOnlyExchange_FailsValidation()
+    {
+        var yaml = """
+            '':
+              type: MX
+              ttl: 600
+              values:
+                - preference: 10
+                  exchange: .
+            """;
+
+        var records = YamlProvider.ParseZoneYaml(yaml, "example.com.");
+        var zone = new DnsSync.Core.DnsZone { Name = "example.com.", Records = records };
+        var result = ZoneValidator.Validate(zone);
+
+        result.IsValid.ShouldBeFalse();
+        result.Errors.ShouldContain(e => e.Contains("MX") && e.Contains("exchange") && e.Contains("empty"));
+    }
+
+    [Fact]
+    public void ParseZoneYaml_MxEmptyExchange_FailsValidation()
+    {
+        var yaml = """
+            '':
+              type: MX
+              ttl: 600
+              values:
+                - preference: 10
+                  exchange: ''
+            """;
+
+        var records = YamlProvider.ParseZoneYaml(yaml, "example.com.");
+        var zone = new DnsSync.Core.DnsZone { Name = "example.com.", Records = records };
+        var result = ZoneValidator.Validate(zone);
+
+        result.IsValid.ShouldBeFalse();
+        result.Errors.ShouldContain(e => e.Contains("MX") && e.Contains("exchange") && e.Contains("empty"));
+    }
+
+    [Fact]
+    public void ParseZoneYaml_MxValidExchanges_PassesValidation()
+    {
+        var yaml = """
+            '':
+              type: MX
+              ttl: 600
+              values:
+                - preference: 10
+                  exchange: mx01.mail.icloud.com.
+                - preference: 20
+                  exchange: mx02.mail.icloud.com.
+            """;
+
+        var records = YamlProvider.ParseZoneYaml(yaml, "example.com.");
+        var zone = new DnsSync.Core.DnsZone { Name = "example.com.", Records = records };
+        var result = ZoneValidator.Validate(zone);
+
+        result.IsValid.ShouldBeTrue();
     }
 }
