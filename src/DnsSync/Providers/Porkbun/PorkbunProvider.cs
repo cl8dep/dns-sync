@@ -257,7 +257,7 @@ public class PorkbunProvider : IProvider
                 Name = name,
                 Type = "TXT",
                 Ttl = ttl,
-                Values = [content.Trim('"')]
+                Values = [TxtRecord.ParseTxtContent(content)]
             },
 
             "NS" => new NsRecord
