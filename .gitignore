@@ -19,8 +19,7 @@ config.yaml
 domains/
 
 ## Local test fixtures
-local-test/
-test/imported/
+test/*
 
 ## OS
 .DS_Store
