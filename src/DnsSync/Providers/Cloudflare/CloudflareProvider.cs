@@ -396,7 +396,7 @@ public class CloudflareProvider : IProvider
                 Name = name,
                 Type = "TXT",
                 Ttl = ttl,
-                Values = [StripTxtQuotes(r.GetProperty("content").GetString()!)]
+                Values = [TxtRecord.ParseTxtContent(r.GetProperty("content").GetString()!)]
             },
             "NS" => new NsRecord
             {
@@ -619,48 +619,6 @@ public class CloudflareProvider : IProvider
         return body;
     }
 
-    /// <summary>
-    /// Cloudflare returns TXT record content as DNS wire-format quoted strings.
-    /// Long values (e.g. DKIM keys) are split into 255-byte chunks:
-    ///   "chunk1" "chunk2"
-    /// This method joins all chunks into a single plain string, handling backslash escapes.
-    /// </summary>
-    private static string StripTxtQuotes(string content)
-    {
-        var result = new System.Text.StringBuilder();
-        var i = 0;
-        while (i < content.Length)
-        {
-            while (i < content.Length && content[i] == ' ') i++;
-            if (i >= content.Length) break;
-
-            if (content[i] == '"')
-            {
-                i++; // skip opening quote
-                while (i < content.Length && content[i] != '"')
-                {
-                    if (content[i] == '\\' && i + 1 < content.Length)
-                    {
-                        result.Append(content[i + 1]);
-                        i += 2;
-                    }
-                    else
-                    {
-                        result.Append(content[i]);
-                        i++;
-                    }
-                }
-                if (i < content.Length) i++; // skip closing quote
-            }
-            else
-            {
-                var start = i;
-                while (i < content.Length && content[i] != ' ') i++;
-                result.Append(content[start..i]);
-            }
-        }
-        return result.ToString();
-    }
 }
 
 internal sealed class CloudflareRateLimitException : Exception { }
