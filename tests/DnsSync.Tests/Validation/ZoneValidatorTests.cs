@@ -179,6 +179,38 @@ public class ZoneValidatorTests
     }
 
     [Fact]
+    public void Validate_CnameWithUnderscoreLabel_IsValid()
+    {
+        var zone = ZoneWith(new CnameRecord
+        {
+            Name = "_domainconnect.example.com.",
+            Type = "CNAME",
+            Ttl = 3600,
+            Target = "_domainconnect.gd.domaincontrol.com."
+        });
+
+        var result = ZoneValidator.Validate(zone);
+
+        result.IsValid.ShouldBeTrue();
+    }
+
+    [Fact]
+    public void Validate_CnameWithDmarcTarget_IsValid()
+    {
+        var zone = ZoneWith(new CnameRecord
+        {
+            Name = "_dmarc.example.com.",
+            Type = "CNAME",
+            Ttl = 3600,
+            Target = "_dmarc.forwarddomain.com."
+        });
+
+        var result = ZoneValidator.Validate(zone);
+
+        result.IsValid.ShouldBeTrue();
+    }
+
+    [Fact]
     public void Validate_ValidIpv6_IsValid()
     {
         var zone = ZoneWith(new AaaaRecord
