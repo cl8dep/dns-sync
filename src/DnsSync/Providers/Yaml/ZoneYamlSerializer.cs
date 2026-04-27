@@ -71,7 +71,10 @@ public static class ZoneYamlSerializer
             case MxRecord mx:
                 sb.AppendLine($"{indent}values:");
                 foreach (var v in mx.Values)
-                    sb.AppendLine($"{indent}  - {{preference: {v.Preference}, exchange: {v.Exchange}}}");
+                {
+                    sb.AppendLine($"{indent}  - preference: {v.Preference}");
+                    sb.AppendLine($"{indent}    exchange: {v.Exchange}");
+                }
                 break;
 
             case TxtRecord txt:
@@ -88,14 +91,22 @@ public static class ZoneYamlSerializer
             case CaaRecord caa:
                 sb.AppendLine($"{indent}values:");
                 foreach (var v in caa.Values)
-                    sb.AppendLine($"{indent}  - {{flags: {v.Flags}, tag: {v.Tag}, value: \"{v.Value}\"}}");
+                {
+                    sb.AppendLine($"{indent}  - flags: {v.Flags}");
+                    sb.AppendLine($"{indent}    tag: {v.Tag}");
+                    sb.AppendLine($"{indent}    value: \"{v.Value}\"");
+                }
                 break;
 
             case SrvRecord srv:
                 sb.AppendLine($"{indent}values:");
                 foreach (var v in srv.Values)
-                    sb.AppendLine(
-                        $"{indent}  - {{priority: {v.Priority}, weight: {v.Weight}, port: {v.Port}, target: {v.Target}}}");
+                {
+                    sb.AppendLine($"{indent}  - priority: {v.Priority}");
+                    sb.AppendLine($"{indent}    weight: {v.Weight}");
+                    sb.AppendLine($"{indent}    port: {v.Port}");
+                    sb.AppendLine($"{indent}    target: {v.Target}");
+                }
                 break;
         }
     }

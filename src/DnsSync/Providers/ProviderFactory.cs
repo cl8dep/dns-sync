@@ -1,6 +1,7 @@
 using DnsSync.Config;
 using DnsSync.Providers.Cloudflare;
 using DnsSync.Providers.Gcp;
+using DnsSync.Providers.GoDaddy;
 using DnsSync.Providers.Porkbun;
 using DnsSync.Providers.Route53;
 using DnsSync.Providers.Yaml;
@@ -57,9 +58,16 @@ public static class ProviderFactory
                 sessionToken: Environment.GetEnvironmentVariable("AWS_SESSION_TOKEN"),
                 hostedZoneId: config.HostedZoneId),
 
+            "godaddy" => new GoDaddyProvider(
+                config.ApiKey ?? throw new InvalidOperationException(
+                    $"Provider '{name}' (godaddy) requires 'api_key'."),
+                config.SecretKey ?? throw new InvalidOperationException(
+                    $"Provider '{name}' (godaddy) requires 'secret_key'."),
+                loggerFactory.CreateLogger<GoDaddyProvider>()),
+
             _ => throw new NotSupportedException(
                 $"Provider type '{config.Type}' is not supported in this build. " +
-                "Supported types: yaml, cloudflare, gcp_cloud_dns, porkbun, route53")
+                "Supported types: yaml, cloudflare, gcp_cloud_dns, porkbun, route53, godaddy")
         };
     }
 }

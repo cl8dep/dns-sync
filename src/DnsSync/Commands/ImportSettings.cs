@@ -5,11 +5,11 @@ namespace DnsSync.Commands;
 
 public class ImportSettings : BaseSettings
 {
-    [CommandOption("--provider <NAME>")]
+    [CommandOption("-p|--provider <NAME>")]
     [Description("Provider name from config to import from")]
     public string Provider { get; set; } = string.Empty;
 
-    [CommandOption("--zone <ZONE>")]
+    [CommandOption("-z|--zone <ZONE>")]
     [Description("Import a single zone (e.g. example.com.)")]
     public string? Zone { get; set; }
 
@@ -17,7 +17,7 @@ public class ImportSettings : BaseSettings
     [Description("Import all zones from the provider")]
     public bool All { get; set; }
 
-    [CommandOption("--output <DIR>")]
+    [CommandOption("-o|--output <DIR>")]
     [Description("Directory to write zone YAML files (default: ./zones)")]
     [DefaultValue("./zones")]
     public string Output { get; set; } = "./zones";

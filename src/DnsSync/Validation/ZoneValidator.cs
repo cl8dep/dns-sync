@@ -143,15 +143,21 @@ public static class ZoneValidator
         return result;
     }
 
+    // RFC 1035 §2.3.4 + RFC 1123 §2.1 + RFC 2782 (underscore labels for service records):
+    // - Each label: 1–63 chars, [a-zA-Z0-9_-]
+    // - Labels must not start or end with '-' (RFC 1123)
+    // - Labels starting with '_' are valid service-name prefixes (RFC 2782, used by SRV, DMARC, ACME, etc.)
+    // - Total name length: max 253 chars (without trailing dot)
     private static bool IsValidHostname(string value)
     {
         var trimmed = value.TrimEnd('.');
-        return !string.IsNullOrEmpty(trimmed)
-            && trimmed.Length <= 253
-            && trimmed.Split('.').All(label =>
-                label.Length is > 0 and <= 63
-                && label.All(c => char.IsLetterOrDigit(c) || c == '-')
-                && !label.StartsWith('-') && !label.EndsWith('-'));
+        if (string.IsNullOrEmpty(trimmed) || trimmed.Length > 253)
+            return false;
+
+        return trimmed.Split('.').All(label =>
+            label.Length is > 0 and <= 63
+            && label.All(c => char.IsAsciiLetterOrDigit(c) || c == '-' || c == '_')
+            && !label.StartsWith('-') && !label.EndsWith('-'));
     }
 }
 

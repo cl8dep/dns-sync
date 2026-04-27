@@ -9,7 +9,7 @@ public static class ConfigLoader
     private static readonly Regex EnvVarPattern = new(@"\$\{([^}]+)\}", RegexOptions.Compiled);
 
     private static readonly HashSet<string> KnownProviderTypes =
-        new(StringComparer.OrdinalIgnoreCase) { "yaml", "cloudflare", "gcp_cloud_dns", "porkbun", "route53" };
+        new(StringComparer.OrdinalIgnoreCase) { "yaml", "cloudflare", "gcp_cloud_dns", "porkbun", "route53", "godaddy" };
 
     public static DnsSyncConfig Load(string path)
     {
@@ -105,6 +105,13 @@ public static class ConfigLoader
                         errors.Add($"Provider '{name}' (porkbun) requires 'api_key'.");
                     if (string.IsNullOrWhiteSpace(provider.SecretKey))
                         errors.Add($"Provider '{name}' (porkbun) requires 'secret_key'.");
+                    break;
+
+                case "godaddy":
+                    if (string.IsNullOrWhiteSpace(provider.ApiKey))
+                        errors.Add($"Provider '{name}' (godaddy) requires 'api_key'.");
+                    if (string.IsNullOrWhiteSpace(provider.SecretKey))
+                        errors.Add($"Provider '{name}' (godaddy) requires 'secret_key'.");
                     break;
             }
         }
