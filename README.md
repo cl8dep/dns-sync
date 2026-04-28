@@ -23,6 +23,25 @@ It works like Terraform for DNS: `plan` shows what would change, `apply` makes i
 
 ---
 
+## Features
+
+| Feature | Description |
+|---|---|
+| **DNS sync** | Sync records across providers from YAML zone files — creates, updates, or deletes to match desired state |
+| **Plan before applying** | `dns-sync plan` shows every change that would be made before a single record is touched |
+| **Multi-zone, single source** | One zone file applied to multiple domains — define records once, deploy everywhere |
+| **Multi-provider targets** | Sync the same records to Cloudflare, Route 53, GCP Cloud DNS, and more simultaneously |
+| **GitOps workflow** | Open a PR → get a diff comment → merge to apply. One `uses:` line in GitHub Actions is all it takes |
+| **Saved plan artifacts** | `--save-plan` captures a signed plan; `--from-plan` applies exactly what was reviewed — no re-reads, no drift |
+| **Live provider comparison** | `dns-sync diff` compares two providers directly without a zone file |
+| **Import from providers** | `dns-sync import` pulls live records from any provider into a local YAML zone file |
+| **Validation** | `dns-sync validate` catches config and zone file errors before any network call is made |
+| **JSON Schema** | Zone files and `config.yaml` ship with JSON Schemas — get autocomplete and inline errors in VS Code |
+| **Single binary** | One self-contained binary, no runtime or dependencies — download and run |
+| **Cross-platform** | Native binaries for Linux (x64), macOS (Apple Silicon + Intel) |
+
+---
+
 ## Supported providers
 
 | Provider | Type | Read | Write |
