@@ -46,7 +46,7 @@ runs:
       shell: bash
       run: |
         set +e
-        dns-sync plan -c "${{ inputs.config }}" --save-plan plan.yaml --exit-code -w 2>&1 | tee plan.txt
+        dns-sync plan -c "${{ inputs.config }}" --save-plan plan.yaml --exit-code -w --no-color 2>&1 | tee plan.txt
         echo "exit_code=${PIPESTATUS[0]}" >> "$GITHUB_OUTPUT"
         set -e
 
@@ -135,10 +135,10 @@ runs:
       shell: bash
       run: |
         if [ -f plan.yaml ]; then
-          dns-sync apply -c "${{ inputs.config }}" --from-plan plan.yaml --yes
+          dns-sync apply -c "${{ inputs.config }}" --from-plan plan.yaml --yes --no-color
         else
           echo "No saved plan found for ${{ github.sha }} — running apply directly"
-          dns-sync apply -c "${{ inputs.config }}" --yes
+          dns-sync apply -c "${{ inputs.config }}" --yes --no-color
         fi
 
     - name: Post apply confirmation
