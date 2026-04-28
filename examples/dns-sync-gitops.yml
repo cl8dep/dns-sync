@@ -1,0 +1,71 @@
+# GitOps workflow for dns-sync — copy this to .github/workflows/dns-sync.yml in your repo
+#
+# Flow:
+#   1. Open a PR modifying zones/** or config.yaml
+#   2. dns-sync plan runs and posts the diff as a PR comment
+#   3. Review and merge to main
+#   4. dns-sync apply runs automatically and posts a confirmation comment
+#
+# Setup:
+#   1. Copy this file to .github/workflows/dns-sync.yml in your repo
+#   2. Replace the secret names in the env blocks with your provider's actual secrets
+#   3. Add those secrets in Settings → Secrets and variables → Actions
+
+name: Sync DNS
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - zones/**
+      - config.yaml
+  pull_request:
+    branches: [main]
+    paths:
+      - zones/**
+      - config.yaml
+
+# Secret examples by provider:
+#   Cloudflare:   CF_API_TOKEN
+#   Porkbun:      PORKBUN_API_KEY, PORKBUN_SECRET_KEY
+#   Route 53:     AWS_ACCESS_KEY_ID, AWS_SECRET_ACCESS_KEY, AWS_REGION
+#   GCP Cloud DNS: GOOGLE_APPLICATION_CREDENTIALS
+#   GoDaddy:      GODADDY_API_KEY, GODADDY_API_SECRET
+
+jobs:
+  plan:
+    name: Plan
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    concurrency:
+      group: dns-sync-${{ github.ref }}
+      cancel-in-progress: true
+    permissions:
+      contents: read
+      pull-requests: write
+    steps:
+      - uses: actions/checkout@v4
+      - uses: cl8dep/dns-sync@v1
+        with:
+          command: plan
+          config: config.yaml
+        env:
+          # Replace with your provider's secret(s)
+          CF_API_TOKEN: ${{ secrets.CF_API_TOKEN }}
+
+  apply:
+    name: Apply
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pull-requests: write
+    steps:
+      - uses: actions/checkout@v4
+      - uses: cl8dep/dns-sync@v1
+        with:
+          command: apply
+          config: config.yaml
+        env:
+          # Replace with your provider's secret(s)
+          CF_API_TOKEN: ${{ secrets.CF_API_TOKEN }}
