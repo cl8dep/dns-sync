@@ -1,0 +1,129 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://raw.githubusercontent.com/cl8dep/dns-sync/main/schemas/config.schema.json",
+  "title": "dns-sync Config File",
+  "description": "Configuration file for dns-sync. Defines providers and zone sync mappings.",
+  "type": "object",
+  "required": ["providers", "zones"],
+  "additionalProperties": false,
+  "properties": {
+    "providers": {
+      "type": "object",
+      "description": "Named provider instances. Each key is a provider name referenced by zones.",
+      "minProperties": 1,
+      "additionalProperties": {
+        "$ref": "#/definitions/providerConfig"
+      }
+    },
+    "zones": {
+      "type": "object",
+      "description": "Zone sync mappings. Each key is a fully-qualified zone name ending with a dot (e.g. example.com.).",
+      "minProperties": 1,
+      "additionalProperties": {
+        "$ref": "#/definitions/zoneConfig"
+      }
+    }
+  },
+  "definitions": {
+    "providerConfig": {
+      "type": "object",
+      "required": ["type"],
+      "additionalProperties": false,
+      "properties": {
+        "type": {
+          "type": "string",
+          "description": "Provider type.",
+          "enum": ["yaml", "cloudflare", "gcp_cloud_dns", "porkbun", "route53", "godaddy"]
+        },
+        "readonly": {
+          "type": "boolean",
+          "description": "Mark this provider as read-only. It can be used as a zone source but not as a sync target.",
+          "default": false
+        },
+        "directory": {
+          "type": "string",
+          "description": "(yaml) Path to the directory containing zone YAML files.",
+          "examples": ["./zones"]
+        },
+        "api_token": {
+          "type": "string",
+          "description": "(cloudflare) Scoped API token with Zone:DNS:Edit permission. Supports ${ENV_VAR} interpolation.",
+          "examples": ["${CF_API_TOKEN}"]
+        },
+        "account_id": {
+          "type": "string",
+          "description": "(cloudflare) Account ID to narrow zone lookup. Optional but recommended when managing zones across multiple accounts.",
+          "examples": ["${CLOUDFLARE_ACCOUNT_ID}"]
+        },
+        "api_key": {
+          "type": "string",
+          "description": "(porkbun, godaddy) API key. Supports ${ENV_VAR} interpolation.",
+          "examples": ["${PORKBUN_API_KEY}", "${GODADDY_API_KEY}"]
+        },
+        "secret_key": {
+          "type": "string",
+          "description": "(porkbun, godaddy) Secret key. Supports ${ENV_VAR} interpolation.",
+          "examples": ["${PORKBUN_SECRET_KEY}", "${GODADDY_API_SECRET}"]
+        },
+        "access_key_id": {
+          "type": "string",
+          "description": "(route53) AWS access key ID. Supports ${ENV_VAR} interpolation.",
+          "examples": ["${AWS_ACCESS_KEY_ID}"]
+        },
+        "secret_access_key": {
+          "type": "string",
+          "description": "(route53) AWS secret access key. Supports ${ENV_VAR} interpolation.",
+          "examples": ["${AWS_SECRET_ACCESS_KEY}"]
+        },
+        "region": {
+          "type": "string",
+          "description": "(route53) AWS region. Defaults to us-east-1.",
+          "default": "us-east-1",
+          "examples": ["us-east-1", "eu-west-1"]
+        },
+        "hosted_zone_id": {
+          "type": "string",
+          "description": "(route53) Hosted zone ID. If provided, skips zone lookup by name. Accepts Z1234567890ABC or /hostedzone/Z1234567890ABC.",
+          "examples": ["Z1234567890ABC", "/hostedzone/Z1234567890ABC"]
+        },
+        "project": {
+          "type": "string",
+          "description": "(gcp_cloud_dns) GCP project ID. Inferred from credentials or GOOGLE_CLOUD_PROJECT env var if omitted.",
+          "examples": ["my-gcp-project"]
+        },
+        "credentials_file": {
+          "type": "string",
+          "description": "(gcp_cloud_dns) Path to a service account JSON key file. Falls back to GOOGLE_APPLICATION_CREDENTIALS, Application Default Credentials, or the metadata server.",
+          "examples": ["/secrets/gcp-key.json", "${GOOGLE_APPLICATION_CREDENTIALS}"]
+        },
+        "private": {
+          "type": ["boolean", "null"],
+          "description": "(gcp_cloud_dns) Filter zones by visibility. true = private zones only, false = public zones only, null (default) = no filter.",
+          "default": null
+        }
+      }
+    },
+    "zoneConfig": {
+      "type": "object",
+      "required": ["source", "targets"],
+      "additionalProperties": false,
+      "description": "Sync mapping for a single DNS zone.",
+      "properties": {
+        "source": {
+          "type": "string",
+          "description": "Provider name to read the desired DNS state from. Must be defined in providers.",
+          "examples": ["yaml_source", "cloudflare"]
+        },
+        "targets": {
+          "type": "array",
+          "description": "One or more provider names to sync DNS state to. Must be defined in providers and not readonly.",
+          "minItems": 1,
+          "items": {
+            "type": "string"
+          },
+          "examples": [["cloudflare"], ["cloudflare", "route53"]]
+        }
+      }
+    }
+  }
+}

@@ -1,3 +1,4 @@
+# yaml-language-server: $schema=https://raw.githubusercontent.com/cl8dep/dns-sync/main/schemas/config.schema.json
 # dns-sync configuration example
 # Copy this to config.yaml and fill in your credentials.
 # NEVER commit config.yaml — it is in .gitignore.
