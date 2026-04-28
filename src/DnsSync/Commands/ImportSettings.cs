@@ -13,7 +13,7 @@ public class ImportSettings : BaseSettings
     [Description("Import a single zone (e.g. example.com.)")]
     public string? Zone { get; set; }
 
-    [CommandOption("--all")]
+    [CommandOption("-a|--all")]
     [Description("Import all zones from the provider")]
     public bool All { get; set; }
 
@@ -22,7 +22,7 @@ public class ImportSettings : BaseSettings
     [DefaultValue("./zones")]
     public string Output { get; set; } = "./zones";
 
-    [CommandOption("--force")]
+    [CommandOption("-f|--force")]
     [Description("Overwrite existing zone files")]
     public bool Force { get; set; }
 }
