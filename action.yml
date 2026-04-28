@@ -26,10 +26,16 @@ runs:
     - name: Download dns-sync
       shell: bash
       run: |
+        case "$RUNNER_OS" in
+          Linux)  ARTIFACT="dns-sync-linux-x64" ;;
+          macOS)  ARTIFACT="dns-sync-darwin-$(uname -m | sed 's/x86_64/x64/;s/arm64/arm64/')" ;;
+          *)      echo "Unsupported runner OS: $RUNNER_OS" && exit 1 ;;
+        esac
+
         if [ "${{ inputs.version }}" = "latest" ]; then
-          URL="https://github.com/cl8dep/dns-sync/releases/latest/download/dns-sync-linux-x64"
+          URL="https://github.com/cl8dep/dns-sync/releases/latest/download/${ARTIFACT}"
         else
-          URL="https://github.com/cl8dep/dns-sync/releases/download/${{ inputs.version }}/dns-sync-linux-x64"
+          URL="https://github.com/cl8dep/dns-sync/releases/download/${{ inputs.version }}/${ARTIFACT}"
         fi
         curl -fsSL "$URL" -o /usr/local/bin/dns-sync
         chmod +x /usr/local/bin/dns-sync
