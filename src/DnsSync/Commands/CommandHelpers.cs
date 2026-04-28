@@ -58,8 +58,21 @@ public static class CommandHelpers
         }
     }
 
-    public static void PrintPlan(DnsPlan plan, string zoneName, string targetName, bool wide = false)
+    public static void PrintPlan(DnsPlan plan, string zoneName, string targetName, bool wide = false, string output = "color")
     {
+        if (string.Equals(output, "diff", StringComparison.OrdinalIgnoreCase))
+        {
+            PrintPlanDiff(plan, zoneName, targetName, wide);
+            return;
+        }
+
+        if (string.Equals(output, "plain", StringComparison.OrdinalIgnoreCase))
+        {
+            PrintPlanPlain(plan, zoneName, targetName, wide);
+            return;
+        }
+
+        // color (default)
         AnsiConsole.MarkupLine($"\nZone: [bold]{Markup.Escape(zoneName)}[/] → [bold]{Markup.Escape(targetName)}[/]");
 
         if (plan.IsEmpty)
@@ -124,6 +137,119 @@ public static class CommandHelpers
         if (plan.Deletes > 0) summary.Add($"[red]{plan.Deletes} delete(s)[/]");
 
         AnsiConsole.MarkupLine($"\n  {string.Join(", ", summary)}");
+    }
+
+    private static void PrintPlanPlain(DnsPlan plan, string zoneName, string targetName, bool wide)
+    {
+        Console.WriteLine($"\nZone: {zoneName} → {targetName}");
+
+        if (plan.IsEmpty)
+        {
+            Console.WriteLine("  No changes");
+            return;
+        }
+
+        foreach (var change in plan.Changes)
+        {
+            switch (change.ChangeType)
+            {
+                case ChangeType.Create:
+                    Console.WriteLine($"  + {change.RecordName,-45} {change.RecordType,-6} {change.After!.Ttl,5}" +
+                        (wide ? "" : $"  {Truncate(change.After.FormatValues())}"));
+                    if (wide)
+                        Console.WriteLine($"      {change.After.FormatValues()}");
+                    break;
+
+                case ChangeType.Update when change.IsTtlOnlyChange:
+                    Console.WriteLine($"  ~ {change.RecordName,-45} {change.RecordType,-6} {change.Before!.Ttl}→{change.After!.Ttl}" +
+                        (wide ? "  (ttl only)" : $"  {Truncate(change.After.FormatValues())}  (ttl only)"));
+                    if (wide)
+                        Console.WriteLine($"      {change.After!.FormatValues()}");
+                    break;
+
+                case ChangeType.Update:
+                    Console.WriteLine($"  ~ {change.RecordName,-45} {change.RecordType,-6} {change.After!.Ttl,5}");
+                    if (wide)
+                    {
+                        Console.WriteLine($"      before: {change.Before!.FormatValues()}");
+                        Console.WriteLine($"      after:  {change.After.FormatValues()}");
+                    }
+                    else
+                    {
+                        Console.WriteLine($"    before: {Truncate(change.Before!.FormatValues(), 120)}");
+                        Console.WriteLine($"    after:  {Truncate(change.After.FormatValues(), 120)}");
+                    }
+                    break;
+
+                case ChangeType.Delete:
+                    Console.WriteLine($"  - {change.RecordName,-45} {change.RecordType,-6} {change.Before!.Ttl,5}" +
+                        (wide ? "" : $"  {Truncate(change.Before.FormatValues())}"));
+                    if (wide)
+                        Console.WriteLine($"      {change.Before.FormatValues()}");
+                    break;
+            }
+        }
+
+        var summary = new List<string>();
+        if (plan.Creates > 0) summary.Add($"{plan.Creates} create(s)");
+        if (plan.Updates > 0) summary.Add($"{plan.Updates} update(s)");
+        if (plan.Deletes > 0) summary.Add($"{plan.Deletes} delete(s)");
+        Console.WriteLine($"\n  {string.Join(", ", summary)}");
+    }
+
+    private static void PrintPlanDiff(DnsPlan plan, string zoneName, string targetName, bool wide)
+    {
+        Console.WriteLine($"\n# Zone: {zoneName} → {targetName}");
+
+        if (plan.IsEmpty)
+        {
+            Console.WriteLine("# No changes");
+            return;
+        }
+
+        foreach (var change in plan.Changes)
+        {
+            switch (change.ChangeType)
+            {
+                case ChangeType.Create:
+                    Console.WriteLine($"+ {change.RecordName,-45} {change.RecordType,-6} {change.After!.Ttl,5}" +
+                        (wide ? "" : $"  {Truncate(change.After.FormatValues())}"));
+                    if (wide)
+                        Console.WriteLine($"+   {change.After.FormatValues()}");
+                    break;
+
+                case ChangeType.Update when change.IsTtlOnlyChange:
+                    Console.WriteLine($"- {change.RecordName,-45} {change.RecordType,-6} {change.Before!.Ttl,5}  (ttl only)");
+                    Console.WriteLine($"+ {change.RecordName,-45} {change.RecordType,-6} {change.After!.Ttl,5}  (ttl only)");
+                    break;
+
+                case ChangeType.Update:
+                    Console.WriteLine($"- {change.RecordName,-45} {change.RecordType,-6} {change.Before!.Ttl,5}");
+                    if (wide)
+                        Console.WriteLine($"-   {change.Before.FormatValues()}");
+                    else
+                        Console.WriteLine($"-   {Truncate(change.Before.FormatValues(), 120)}");
+                    Console.WriteLine($"+ {change.RecordName,-45} {change.RecordType,-6} {change.After!.Ttl,5}");
+                    if (wide)
+                        Console.WriteLine($"+   {change.After.FormatValues()}");
+                    else
+                        Console.WriteLine($"+   {Truncate(change.After.FormatValues(), 120)}");
+                    break;
+
+                case ChangeType.Delete:
+                    Console.WriteLine($"- {change.RecordName,-45} {change.RecordType,-6} {change.Before!.Ttl,5}" +
+                        (wide ? "" : $"  {Truncate(change.Before.FormatValues())}"));
+                    if (wide)
+                        Console.WriteLine($"-   {change.Before.FormatValues()}");
+                    break;
+            }
+        }
+
+        var parts = new List<string>();
+        if (plan.Creates > 0) parts.Add($"{plan.Creates} create(s)");
+        if (plan.Updates > 0) parts.Add($"{plan.Updates} update(s)");
+        if (plan.Deletes > 0) parts.Add($"{plan.Deletes} delete(s)");
+        Console.WriteLine($"\n# {string.Join(", ", parts)}");
     }
 
     public static void PrintError(Exception ex, bool verbose = false)
