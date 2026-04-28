@@ -1,0 +1,199 @@
+# GitOps workflow for dns-sync — copy this to .github/workflows/ in your repo
+#
+# Flow:
+#   1. Open a PR modifying zones/** or config.yaml
+#   2. This workflow runs `dns-sync plan` and posts the diff as a PR comment
+#   3. Review and merge to main
+#   4. The apply job runs automatically and posts a confirmation comment
+#
+# Setup:
+#   1. Copy this file to .github/workflows/dns-sync.yml in your repo
+#   2. Replace the env block below with your provider's secrets
+#   3. Adjust `config-path` if your config.yaml is not in the repo root
+
+name: Sync DNS
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - zones/**
+      - config.yaml
+  pull_request:
+    branches: [main]
+    paths:
+      - zones/**
+      - config.yaml
+
+# ── Secrets ──────────────────────────────────────────────────────────────────
+# Add your provider credentials as GitHub Actions secrets and reference them
+# in the env blocks of the plan and apply jobs below.
+#
+# Examples:
+#   Cloudflare:   CF_API_TOKEN
+#   Porkbun:      PORKBUN_API_KEY, PORKBUN_SECRET_KEY
+#   Route 53:     AWS_ACCESS_KEY_ID, AWS_SECRET_ACCESS_KEY, AWS_REGION
+#   GCP Cloud DNS: GOOGLE_APPLICATION_CREDENTIALS (or Workload Identity)
+#   GoDaddy:      GODADDY_API_KEY, GODADDY_API_SECRET
+# ─────────────────────────────────────────────────────────────────────────────
+
+jobs:
+  plan:
+    name: Plan
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    concurrency:
+      group: dns-sync-${{ github.ref }}
+      cancel-in-progress: true
+    permissions:
+      contents: read
+      pull-requests: write
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Download dns-sync
+        run: |
+          curl -fsSL \
+            https://github.com/cl8dep/dns-sync/releases/latest/download/dns-sync-linux-x64 \
+            -o /usr/local/bin/dns-sync
+          chmod +x /usr/local/bin/dns-sync
+
+      - name: Plan
+        id: plan
+        run: |
+          set +e
+          dns-sync plan -c config.yaml --save-plan plan.yaml --exit-code -w 2>&1 | tee plan.txt
+          echo "exit_code=${PIPESTATUS[0]}" >> "$GITHUB_OUTPUT"
+          set -e
+        env:
+          # Replace with your provider's secret(s)
+          CF_API_TOKEN: ${{ secrets.CF_API_TOKEN }}
+
+      - name: Upload plan artifact
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: dns-plan-${{ github.sha }}
+          path: plan.yaml
+          if-no-files-found: ignore
+          retention-days: 30
+
+      - name: Post plan comment
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const fs = require('fs');
+            const exitCode = '${{ steps.plan.outputs.exit_code }}';
+            const planText = fs.existsSync('plan.txt')
+              ? fs.readFileSync('plan.txt', 'utf8').trim()
+              : '(no output)';
+
+            const statusLine =
+              exitCode === '0' ? '✅ No changes'
+              : exitCode === '2' ? '⚠️ Changes pending — review before merging'
+              : '❌ Error — check the workflow logs';
+
+            const body = [
+              '<!-- dns-sync-plan -->',
+              `## DNS Plan — ${statusLine}`,
+              '',
+              '<details>',
+              '<summary>Full plan output</summary>',
+              '',
+              '```',
+              planText,
+              '```',
+              '',
+              '</details>',
+            ].join('\n');
+
+            // Find existing comment to update instead of creating a new one
+            const { data: comments } = await github.rest.issues.listComments({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.issue.number,
+            });
+
+            const existing = comments.find(c =>
+              c.user.login === 'github-actions[bot]' &&
+              c.body.includes('<!-- dns-sync-plan -->')
+            );
+
+            if (existing) {
+              await github.rest.issues.updateComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                comment_id: existing.id,
+                body,
+              });
+            } else {
+              await github.rest.issues.createComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: context.issue.number,
+                body,
+              });
+            }
+
+      - name: Fail on error
+        if: steps.plan.outputs.exit_code == '1'
+        run: exit 1
+
+  apply:
+    name: Apply
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pull-requests: write
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Download dns-sync
+        run: |
+          curl -fsSL \
+            https://github.com/cl8dep/dns-sync/releases/latest/download/dns-sync-linux-x64 \
+            -o /usr/local/bin/dns-sync
+          chmod +x /usr/local/bin/dns-sync
+
+      - name: Download plan artifact
+        id: download
+        uses: actions/download-artifact@v4
+        with:
+          name: dns-plan-${{ github.sha }}
+        continue-on-error: true
+
+      - name: Apply
+        run: |
+          if [ -f plan.yaml ]; then
+            dns-sync apply -c config.yaml --from-plan plan.yaml --yes
+          else
+            echo "No saved plan found for ${{ github.sha }} — running apply directly"
+            dns-sync apply -c config.yaml --yes
+          fi
+        env:
+          # Replace with your provider's secret(s)
+          CF_API_TOKEN: ${{ secrets.CF_API_TOKEN }}
+
+      - name: Post apply confirmation
+        uses: actions/github-script@v7
+        with:
+          script: |
+            // Find the PR that this push merged
+            const { data: prs } = await github.rest.repos.listPullRequestsAssociatedWithCommit({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              commit_sha: context.sha,
+            });
+
+            const pr = prs.find(p => p.base.ref === 'main' && p.state === 'closed');
+            if (!pr) return; // direct push — no PR to comment on
+
+            await github.rest.issues.createComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: pr.number,
+              body: `✅ DNS changes from this PR have been applied (commit \`${context.sha.slice(0, 7)}\`).`,
+            });
