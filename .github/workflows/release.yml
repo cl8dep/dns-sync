@@ -46,6 +46,25 @@ jobs:
             --title "${{ github.ref_name }}" \
             --generate-notes
 
+      - name: Update floating tags
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          TAG="${{ github.ref_name }}"          # e.g. v0.6.5
+          MINOR="${TAG%.*}"                      # e.g. v0.6
+          MAJOR="${MINOR%.*}"                    # e.g. v0
+
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git config user.name "github-actions[bot]"
+
+          # Move floating minor tag (v0.6 → latest v0.6.x)
+          git tag -f "${MINOR}" "${{ github.ref_name }}^{}"
+          git push --force origin "${MINOR}"
+
+          # Move floating major tag (v0 → latest v0.x.x)
+          git tag -f "${MAJOR}" "${{ github.ref_name }}^{}"
+          git push --force origin "${MAJOR}"
+
       - name: Update Homebrew tap
         # Requires a PAT with repo scope stored as secret HOMEBREW_TAP_TOKEN
         # Create at: https://github.com/settings/tokens/new?scopes=repo
