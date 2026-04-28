@@ -11,7 +11,7 @@ inputs:
     required: false
     default: config.yaml
   version:
-    description: 'dns-sync version to download (e.g. v0.6.2). Defaults to latest.'
+    description: 'dns-sync version to download (e.g. v0.6.6). Defaults to latest.'
     required: false
     default: latest
 
