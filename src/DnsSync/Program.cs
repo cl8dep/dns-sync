@@ -42,8 +42,9 @@ else
 var verbose = args.Contains("--verbose") || args.Contains("-v");
 var serilogLevel = verbose ? LogEventLevel.Debug : LogEventLevel.Information;
 
-// Disable ANSI colors if --no-color flag or NO_COLOR env var is set (https://no-color.org/)
-var noColor = args.Contains("--no-color")
+// Disable ANSI colors if --output plain/diff or NO_COLOR env var is set (https://no-color.org/)
+var outputArg = args.SkipWhile(a => a != "--output" && a != "-o").Skip(1).FirstOrDefault() ?? "color";
+var noColor = outputArg is "plain" or "diff"
     || !string.IsNullOrEmpty(Environment.GetEnvironmentVariable("NO_COLOR"));
 
 if (noColor)

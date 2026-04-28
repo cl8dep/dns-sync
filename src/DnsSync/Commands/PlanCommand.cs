@@ -12,7 +12,10 @@ public class PlanCommand(ILoggerFactory loggerFactory) : AsyncCommand<PlanSettin
 {
     protected override async Task<int> ExecuteAsync(CommandContext context, PlanSettings settings, CancellationToken cancellationToken)
     {
-        var jsonMode = string.Equals(settings.Output, "json", StringComparison.OrdinalIgnoreCase);
+        var output = settings.Output.ToLowerInvariant();
+        if (output is not ("color" or "plain" or "diff" or "json"))
+            throw new InvalidOperationException($"Unknown --output value '{settings.Output}'. Valid values: color, plain, diff, json.");
+        var jsonMode = output == "json";
         var useSpinners = !jsonMode && !settings.GcpLogs && !settings.Verbose;
 
         try
@@ -105,7 +108,7 @@ public class PlanCommand(ILoggerFactory loggerFactory) : AsyncCommand<PlanSettin
                         }
                         else
                         {
-                            CommandHelpers.PrintPlan(plan, zoneName, targetName, settings.Wide);
+                            CommandHelpers.PrintPlan(plan, zoneName, targetName, settings.Wide, output);
                         }
 
                         savedZonePlans.Add((zoneName, targetName, plan));

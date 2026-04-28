@@ -18,10 +18,6 @@ public class BaseSettings : CommandSettings
     [Description("Enable debug log output")]
     public bool Verbose { get; set; }
 
-    [CommandOption("--no-color")]
-    [Description("Disable ANSI colors in output (also respected via NO_COLOR env var)")]
-    public bool NoColor { get; set; }
-
     [CommandOption("--gcp-logs")]
     [Description("Output structured JSON logs for Google Cloud Logging (auto-enabled in Cloud Run)")]
     public bool GcpLogs { get; set; }

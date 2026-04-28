@@ -26,9 +26,9 @@ public class DiffSettings : BaseSettings
     public bool Wide { get; set; }
 
     [CommandOption("-o|--output <FORMAT>")]
-    [Description("Output format: text (default) or json")]
-    [DefaultValue("text")]
-    public string Output { get; set; } = "text";
+    [Description("Output format: color (default), plain, diff, or json")]
+    [DefaultValue("color")]
+    public string Output { get; set; } = "color";
 
     [CommandOption("--exit-code")]
     [Description("Return exit code 2 when there are differences (Terraform-compatible)")]

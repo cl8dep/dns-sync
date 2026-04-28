@@ -19,6 +19,10 @@ public class ApplyCommand(ILoggerFactory loggerFactory) : AsyncCommand<ApplySett
                 return 1;
             }
 
+            var output = settings.Output.ToLowerInvariant();
+            if (output is not ("color" or "plain" or "diff" or "json"))
+                throw new InvalidOperationException($"Unknown --output value '{settings.Output}'. Valid values: color, plain, diff, json.");
+
             var config = CommandHelpers.LoadAndValidateConfig(settings);
 
             if (settings.FromPlan is not null)
@@ -106,7 +110,7 @@ public class ApplyCommand(ILoggerFactory loggerFactory) : AsyncCommand<ApplySett
 
             // Print all plans
             foreach (var (zoneName, targetName, plan, _) in plans)
-                CommandHelpers.PrintPlan(plan, zoneName, targetName, settings.Wide);
+                CommandHelpers.PrintPlan(plan, zoneName, targetName, settings.Wide, output);
 
             // Safety guard: abort if too many changes
             if (!settings.Force && totalChanges > settings.MaxChanges)

@@ -18,9 +18,9 @@ public class PlanSettings : BaseSettings
     public bool ExitCode { get; set; }
 
     [CommandOption("-o|--output <FORMAT>")]
-    [Description("Output format: text (default) or json")]
-    [DefaultValue("text")]
-    public string Output { get; set; } = "text";
+    [Description("Output format: color (default), plain, diff, or json")]
+    [DefaultValue("color")]
+    public string Output { get; set; } = "color";
 
     [CommandOption("--save-plan <PATH>")]
     [Description("Save the computed plan to a signed YAML file for later use with 'apply --from-plan'")]
