@@ -1,0 +1,161 @@
+name: dns-sync
+description: Plan or apply DNS changes using dns-sync
+author: cl8dep
+
+inputs:
+  command:
+    description: 'Command to run: plan or apply'
+    required: true
+  config:
+    description: 'Path to config.yaml'
+    required: false
+    default: config.yaml
+  version:
+    description: 'dns-sync version to download (e.g. v0.6.2). Defaults to latest.'
+    required: false
+    default: latest
+
+outputs:
+  exit-code:
+    description: 'Exit code from dns-sync (0 = no changes, 1 = error, 2 = changes pending)'
+    value: ${{ steps.run.outputs.exit_code }}
+
+runs:
+  using: composite
+  steps:
+    - name: Download dns-sync
+      shell: bash
+      run: |
+        if [ "${{ inputs.version }}" = "latest" ]; then
+          URL="https://github.com/cl8dep/dns-sync/releases/latest/download/dns-sync-linux-x64"
+        else
+          URL="https://github.com/cl8dep/dns-sync/releases/download/${{ inputs.version }}/dns-sync-linux-x64"
+        fi
+        curl -fsSL "$URL" -o /usr/local/bin/dns-sync
+        chmod +x /usr/local/bin/dns-sync
+
+    - name: Run plan
+      id: run
+      if: inputs.command == 'plan'
+      shell: bash
+      run: |
+        set +e
+        dns-sync plan -c "${{ inputs.config }}" --save-plan plan.yaml --exit-code -w 2>&1 | tee plan.txt
+        echo "exit_code=${PIPESTATUS[0]}" >> "$GITHUB_OUTPUT"
+        set -e
+
+    - name: Upload plan artifact
+      if: inputs.command == 'plan'
+      uses: actions/upload-artifact@v4
+      with:
+        name: dns-plan-${{ github.sha }}
+        path: plan.yaml
+        if-no-files-found: ignore
+        retention-days: 30
+
+    - name: Post plan comment
+      if: inputs.command == 'plan' && github.event_name == 'pull_request'
+      uses: actions/github-script@v7
+      env:
+        EXIT_CODE: ${{ steps.run.outputs.exit_code }}
+      with:
+        script: |
+          const fs = require('fs');
+          const exitCode = process.env.EXIT_CODE;
+          const planText = fs.existsSync('plan.txt')
+            ? fs.readFileSync('plan.txt', 'utf8').trim()
+            : '(no output)';
+
+          const statusLine =
+            exitCode === '0' ? '✅ No changes'
+            : exitCode === '2' ? '⚠️ Changes pending — review before merging'
+            : '❌ Error — check the workflow logs';
+
+          const body = [
+            '<!-- dns-sync-plan -->',
+            `## DNS Plan — ${statusLine}`,
+            '',
+            '<details>',
+            '<summary>Full plan output</summary>',
+            '',
+            '```',
+            planText,
+            '```',
+            '',
+            '</details>',
+          ].join('\n');
+
+          const { data: comments } = await github.rest.issues.listComments({
+            owner: context.repo.owner,
+            repo: context.repo.repo,
+            issue_number: context.issue.number,
+          });
+
+          const existing = comments.find(c =>
+            c.user.login === 'github-actions[bot]' &&
+            c.body.includes('<!-- dns-sync-plan -->')
+          );
+
+          if (existing) {
+            await github.rest.issues.updateComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              comment_id: existing.id,
+              body,
+            });
+          } else {
+            await github.rest.issues.createComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.issue.number,
+              body,
+            });
+          }
+
+    - name: Fail on plan error
+      if: inputs.command == 'plan' && steps.run.outputs.exit_code == '1'
+      shell: bash
+      run: exit 1
+
+    - name: Download plan artifact
+      if: inputs.command == 'apply'
+      uses: actions/download-artifact@v4
+      with:
+        name: dns-plan-${{ github.sha }}
+      continue-on-error: true
+
+    - name: Run apply
+      if: inputs.command == 'apply'
+      shell: bash
+      run: |
+        if [ -f plan.yaml ]; then
+          dns-sync apply -c "${{ inputs.config }}" --from-plan plan.yaml --yes
+        else
+          echo "No saved plan found for ${{ github.sha }} — running apply directly"
+          dns-sync apply -c "${{ inputs.config }}" --yes
+        fi
+
+    - name: Post apply confirmation
+      if: inputs.command == 'apply'
+      uses: actions/github-script@v7
+      with:
+        script: |
+          const { data: prs } = await github.rest.repos.listPullRequestsAssociatedWithCommit({
+            owner: context.repo.owner,
+            repo: context.repo.repo,
+            commit_sha: context.sha,
+          });
+
+          const pr = prs.find(p => p.base.ref === 'main' && p.state === 'closed');
+          if (!pr) return;
+
+          await github.rest.issues.createComment({
+            owner: context.repo.owner,
+            repo: context.repo.repo,
+            issue_number: pr.number,
+            body: `✅ DNS changes from this PR have been applied (commit \`${context.sha.slice(0, 7)}\`).`,
+          });
+
+branding:
+  icon: refresh-cw
+  color: blue
