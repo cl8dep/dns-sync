@@ -21,11 +21,11 @@ public class DiffSettings : BaseSettings
     [Description("Include apex NS records in the diff (excluded by default to prevent registrar conflicts)")]
     public bool IncludeApexNs { get; set; }
 
-    [CommandOption("--wide")]
+    [CommandOption("-w|--wide")]
     [Description("Show record values on a second line (no truncation)")]
     public bool Wide { get; set; }
 
-    [CommandOption("--output <FORMAT>")]
+    [CommandOption("-o|--output <FORMAT>")]
     [Description("Output format: text (default) or json")]
     [DefaultValue("text")]
     public string Output { get; set; } = "text";

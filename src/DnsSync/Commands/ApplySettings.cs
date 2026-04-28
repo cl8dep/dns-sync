@@ -14,7 +14,7 @@ public class ApplySettings : PlanSettings
     [DefaultValue(50)]
     public int MaxChanges { get; set; } = 50;
 
-    [CommandOption("--force")]
+    [CommandOption("-f|--force")]
     [Description("Override --max-changes safety limit")]
     public bool Force { get; set; }
 

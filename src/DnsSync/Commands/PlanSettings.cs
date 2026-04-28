@@ -5,7 +5,7 @@ namespace DnsSync.Commands;
 
 public class PlanSettings : BaseSettings
 {
-    [CommandOption("--wide")]
+    [CommandOption("-w|--wide")]
     [Description("Show record values on a second line (no truncation)")]
     public bool Wide { get; set; }
 
@@ -17,7 +17,7 @@ public class PlanSettings : BaseSettings
     [Description("Return exit code 2 when there are pending changes (Terraform-compatible)")]
     public bool ExitCode { get; set; }
 
-    [CommandOption("--output <FORMAT>")]
+    [CommandOption("-o|--output <FORMAT>")]
     [Description("Output format: text (default) or json")]
     [DefaultValue("text")]
     public string Output { get; set; } = "text";
