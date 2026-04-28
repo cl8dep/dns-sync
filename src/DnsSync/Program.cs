@@ -142,6 +142,11 @@ app.Configure(config =>
     config.AddCommand<ImportCommand>("import")
         .WithDescription("Import current DNS state from a provider into YAML zone files")
         .WithExample(["import", "--config", "config.yaml", "--provider", "cloudflare", "--all"]);
+
+    config.AddCommand<DiffCommand>("diff")
+        .WithDescription("Compare DNS state between two providers directly (read-only)")
+        .WithExample(["diff", "--from", "cloudflare", "--to", "route53", "--config", "config.yaml"])
+        .WithExample(["diff", "--from", "cloudflare", "--to", "porkbun", "--zone", "example.com.", "--config", "config.yaml"]);
 });
 
 return await app.RunAsync(args);
