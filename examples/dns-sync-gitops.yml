@@ -45,7 +45,7 @@ jobs:
       pull-requests: write
     steps:
       - uses: actions/checkout@v4
-      - uses: cl8dep/dns-sync@v0.6.5
+      - uses: cl8dep/dns-sync@v0.6.7
         with:
           command: plan
           config: config.yaml
@@ -62,7 +62,7 @@ jobs:
       pull-requests: write
     steps:
       - uses: actions/checkout@v4
-      - uses: cl8dep/dns-sync@v0.6.5
+      - uses: cl8dep/dns-sync@v0.6.7
         with:
           command: apply
           config: config.yaml
