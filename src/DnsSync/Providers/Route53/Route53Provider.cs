@@ -170,25 +170,43 @@ public class Route53Provider : IProvider
             return id;
         }
 
-        var name = zoneName.TrimEnd('.');
-        var xml = await GetAsync($"/hostedzone?dnsname={Uri.EscapeDataString(name)}&maxitems=1", ct);
-        var doc = XDocument.Parse(xml);
+        // ListHostedZonesByName sorts alphabetically from dnsname — the first result may not
+        // be an exact match (e.g. querying "heva.co" can return "heva.health" first).
+        // Paginate until we find an exact match or exhaust all zones.
+        var target = DnsNameHelper.NormalizeZoneName(zoneName);
+        string? nextDnsName = zoneName.TrimEnd('.');
+        string? nextHostedZoneId = null;
 
-        var zone = doc.Descendants(R53Ns + "HostedZone").FirstOrDefault();
-        if (zone is null)
-            throw new InvalidOperationException(
-                $"Zone '{zoneName}' not found in Route 53. " +
-                "Ensure the hosted zone exists and credentials have access to it.");
+        while (true)
+        {
+            var query = $"/hostedzone?dnsname={Uri.EscapeDataString(nextDnsName)}";
+            if (nextHostedZoneId is not null)
+                query += $"&hostedzoneid={Uri.EscapeDataString(nextHostedZoneId)}";
 
-        var zoneDnsName = DnsNameHelper.NormalizeZoneName(zone.Element(R53Ns + "Name")?.Value ?? "");
-        if (zoneDnsName != DnsNameHelper.NormalizeZoneName(name))
-            throw new InvalidOperationException(
-                $"Zone '{zoneName}' not found in Route 53. " +
-                $"Nearest match was '{zoneDnsName}'.");
+            var xml = await GetAsync(query, ct);
+            var doc = XDocument.Parse(xml);
 
-        var idPath = zone.Element(R53Ns + "Id")?.Value ?? "";
-        // idPath is like /hostedzone/Z1234567890
-        return idPath.StartsWith("/hostedzone/") ? idPath["/hostedzone/".Length..] : idPath;
+            foreach (var zone in doc.Descendants(R53Ns + "HostedZone"))
+            {
+                var candidateName = DnsNameHelper.NormalizeZoneName(zone.Element(R53Ns + "Name")?.Value ?? "");
+                if (candidateName == target)
+                {
+                    var idPath = zone.Element(R53Ns + "Id")?.Value ?? "";
+                    return idPath.StartsWith("/hostedzone/") ? idPath["/hostedzone/".Length..] : idPath;
+                }
+            }
+
+            var isTruncated = doc.Descendants(R53Ns + "IsTruncated").FirstOrDefault()?.Value;
+            if (isTruncated != "true") break;
+
+            nextDnsName = doc.Descendants(R53Ns + "NextDNSName").FirstOrDefault()?.Value ?? nextDnsName;
+            nextHostedZoneId = doc.Descendants(R53Ns + "NextHostedZoneId").FirstOrDefault()?.Value;
+            if (nextHostedZoneId is null) break;
+        }
+
+        throw new InvalidOperationException(
+            $"Zone '{zoneName}' not found in Route 53. " +
+            "Ensure the hosted zone exists and credentials have access to it.");
     }
 
     // --- Record listing ---
