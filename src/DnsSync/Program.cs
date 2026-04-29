@@ -148,6 +148,11 @@ app.Configure(config =>
         .WithDescription("Compare DNS state between two providers directly (read-only)")
         .WithExample(["diff", "--from", "cloudflare", "--to", "route53", "--config", "config.yaml"])
         .WithExample(["diff", "--from", "cloudflare", "--to", "porkbun", "--zone", "example.com.", "--config", "config.yaml"]);
+
+    config.AddCommand<DriftCommand>("drift")
+        .WithDescription("Detect DNS record drift from desired state without applying changes")
+        .WithExample(["drift", "--config", "config.yaml"])
+        .WithExample(["drift", "--config", "config.yaml", "--output", "json"]);
 });
 
 return await app.RunAsync(args);
