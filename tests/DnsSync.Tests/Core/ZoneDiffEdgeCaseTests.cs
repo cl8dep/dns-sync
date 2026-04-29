@@ -95,18 +95,17 @@ public class ZoneDiffEdgeCaseTests
     // ── case sensitivity in record names ─────────────────────────────────────
 
     [Fact]
-    public void Diff_RecordNamesAreCaseSensitive_TreatedAsDistinct()
+    public void Diff_RecordNamesAreCaseInsensitive_IdenticalZones_ProducesNoPlan()
     {
-        // ZoneDiff compares record names as-is (case-sensitive). Providers are expected
-        // to normalize to lowercase before passing records to ZoneDiff.
+        // DNS names are case-insensitive per RFC 1035. ZoneDiff normalizes before comparing.
         var source = ZoneWith("example.com.", ARecord("WWW.EXAMPLE.COM."));
         var target = ZoneWith("example.com.", ARecord("www.example.com."));
 
         var plan = ZoneDiff.Diff(source, target);
 
-        // Different case → treated as different records
-        plan.Creates.ShouldBe(1); // WWW.EXAMPLE.COM. not in target
-        plan.Deletes.ShouldBe(1); // www.example.com. not in source
+        plan.Creates.ShouldBe(0);
+        plan.Deletes.ShouldBe(0);
+        plan.IsEmpty.ShouldBeTrue();
     }
 
     // ── SOA is always ignored ─────────────────────────────────────────────────

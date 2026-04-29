@@ -30,13 +30,13 @@ public static class ZoneDiff
             .Where(r => !ShouldIgnore(r, source.Name, includeApexNs))
             .ToList();
 
-        // Group by (name, type) — DNS record sets
+        // Group by (name, type) — DNS record sets. Names are case-insensitive per RFC 1035.
         var sourceByKey = sourceRecords
-            .GroupBy(r => (r.Name, r.Type))
+            .GroupBy(r => (Name: r.Name.ToLowerInvariant(), Type: r.Type.ToUpperInvariant()))
             .ToDictionary(g => g.Key, g => g.ToList());
 
         var targetByKey = targetRecords
-            .GroupBy(r => (r.Name, r.Type))
+            .GroupBy(r => (Name: r.Name.ToLowerInvariant(), Type: r.Type.ToUpperInvariant()))
             .ToDictionary(g => g.Key, g => g.ToList());
 
         // Records in source but not in target → Create
