@@ -120,6 +120,18 @@ public class GcpCloudDnsProvider : IProvider, IDisposable
         _project = project;
     }
 
+    /// <summary>Internal constructor for unit tests — bypasses credential loading.</summary>
+    internal GcpCloudDnsProvider(string project, ILogger<GcpCloudDnsProvider> logger, HttpClient http, bool? privateZones = null)
+    {
+        _project = project;
+        _logger = logger;
+        _http = http;
+        _privateZones = privateZones;
+        // Pre-set a non-expiring token so GetAccessTokenAsync returns immediately without I/O.
+        _accessToken = "fake-token";
+        _tokenExpiry = DateTimeOffset.MaxValue;
+    }
+
     // ─── IProvider ────────────────────────────────────────────────────────────
 
     public async Task PreflightAsync(CancellationToken ct = default)

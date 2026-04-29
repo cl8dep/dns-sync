@@ -30,11 +30,14 @@ public class PorkbunProvider : IProvider
     };
 
     public PorkbunProvider(string apiKey, string secretKey, ILogger<PorkbunProvider> logger)
+        : this(apiKey, secretKey, logger, new HttpClient { Timeout = TimeSpan.FromSeconds(30) }) { }
+
+    internal PorkbunProvider(string apiKey, string secretKey, ILogger<PorkbunProvider> logger, HttpClient http)
     {
         _apiKey = apiKey;
         _secretKey = secretKey;
         _logger = logger;
-        _http = new HttpClient { Timeout = TimeSpan.FromSeconds(30) };
+        _http = http;
     }
 
     // ─── IProvider ────────────────────────────────────────────────────────────
@@ -202,7 +205,7 @@ public class PorkbunProvider : IProvider
         {
             if (!r.TryGetProperty("id", out var idEl)) continue;
             var id = idEl.GetString()!;
-            var name = NormalizeFqdn(r.TryGetProperty("name", out var n) ? n.GetString() ?? "" : "");
+            var name = BuildFqdn(r.TryGetProperty("name", out var n) ? n.GetString() ?? "" : "", domain + ".");
             var type = (r.TryGetProperty("type", out var t) ? t.GetString() : null)?.ToUpperInvariant() ?? "";
 
             var key = (name, type);
