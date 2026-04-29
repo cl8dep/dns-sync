@@ -33,7 +33,10 @@ public class ZoneYamlSerializerEdgeCaseTests
         // "@." is not a valid IP but providers may emit odd values; serializer must quote it.
         var zone = MakeZone(new ARecord
         {
-            Name = "www.example.com.", Type = "A", Ttl = 300, Addresses = ["@."]
+            Name = "www.example.com.",
+            Type = "A",
+            Ttl = 300,
+            Addresses = ["@."]
         });
 
         var yaml = ZoneYamlSerializer.Serialize(zone);
@@ -49,7 +52,10 @@ public class ZoneYamlSerializerEdgeCaseTests
     {
         var zone = MakeZone(new ARecord
         {
-            Name = "www.example.com.", Type = "A", Ttl = 300, Addresses = ["`value`"]
+            Name = "www.example.com.",
+            Type = "A",
+            Ttl = 300,
+            Addresses = ["`value`"]
         });
 
         var yaml = ZoneYamlSerializer.Serialize(zone);
@@ -64,7 +70,10 @@ public class ZoneYamlSerializerEdgeCaseTests
     {
         var zone = MakeZone(new ARecord
         {
-            Name = "www.example.com.", Type = "A", Ttl = 300, Addresses = ["key:value"]
+            Name = "www.example.com.",
+            Type = "A",
+            Ttl = 300,
+            Addresses = ["key:value"]
         });
 
         var yaml = ZoneYamlSerializer.Serialize(zone);
@@ -79,7 +88,10 @@ public class ZoneYamlSerializerEdgeCaseTests
     {
         var zone = MakeZone(new ARecord
         {
-            Name = "www.example.com.", Type = "A", Ttl = 300, Addresses = ["val#comment"]
+            Name = "www.example.com.",
+            Type = "A",
+            Ttl = 300,
+            Addresses = ["val#comment"]
         });
 
         var yaml = ZoneYamlSerializer.Serialize(zone);
@@ -95,7 +107,10 @@ public class ZoneYamlSerializerEdgeCaseTests
         const string val = "say \"hello\"";
         var zone = MakeZone(new ARecord
         {
-            Name = "www.example.com.", Type = "A", Ttl = 300, Addresses = [val]
+            Name = "www.example.com.",
+            Type = "A",
+            Ttl = 300,
+            Addresses = [val]
         });
 
         var yaml = ZoneYamlSerializer.Serialize(zone);
@@ -112,7 +127,10 @@ public class ZoneYamlSerializerEdgeCaseTests
         const string val = @"C:\path";
         var zone = MakeZone(new ARecord
         {
-            Name = "www.example.com.", Type = "A", Ttl = 300, Addresses = [val]
+            Name = "www.example.com.",
+            Type = "A",
+            Ttl = 300,
+            Addresses = [val]
         });
 
         var yaml = ZoneYamlSerializer.Serialize(zone);
@@ -127,7 +145,10 @@ public class ZoneYamlSerializerEdgeCaseTests
     {
         var zone = MakeZone(new ARecord
         {
-            Name = "www.example.com.", Type = "A", Ttl = 300, Addresses = [""]
+            Name = "www.example.com.",
+            Type = "A",
+            Ttl = 300,
+            Addresses = [""]
         });
 
         var yaml = ZoneYamlSerializer.Serialize(zone);
@@ -151,7 +172,10 @@ public class ZoneYamlSerializerEdgeCaseTests
         // The serializer should emit them and the round-trip must preserve the string.
         var zone = MakeZone(new ARecord
         {
-            Name = "www.example.com.", Type = "A", Ttl = 300, Addresses = [keyword]
+            Name = "www.example.com.",
+            Type = "A",
+            Ttl = 300,
+            Addresses = [keyword]
         });
 
         var yaml = ZoneYamlSerializer.Serialize(zone);
@@ -166,10 +190,10 @@ public class ZoneYamlSerializerEdgeCaseTests
     {
         var zone = MakeZone(new NsRecord
         {
-            Name         = "example.com.",
-            Type         = "NS",
-            Ttl          = 3600,
-            Nameservers  = ["ns1.porkbun.com.", "ns2.porkbun.com.", "ns3.porkbun.com."]
+            Name = "example.com.",
+            Type = "NS",
+            Ttl = 3600,
+            Nameservers = ["ns1.porkbun.com.", "ns2.porkbun.com.", "ns3.porkbun.com."]
         });
 
         var parsed = RoundtripParsed(zone);
@@ -185,7 +209,10 @@ public class ZoneYamlSerializerEdgeCaseTests
     {
         var zone = MakeZone(new TxtRecord
         {
-            Name = "example.com.", Type = "TXT", Ttl = 600, Values = ["k=v:extra"]
+            Name = "example.com.",
+            Type = "TXT",
+            Ttl = 600,
+            Values = ["k=v:extra"]
         });
 
         var yaml = ZoneYamlSerializer.Serialize(zone);
@@ -201,7 +228,10 @@ public class ZoneYamlSerializerEdgeCaseTests
         const string val = @"path\to\file";
         var zone = MakeZone(new TxtRecord
         {
-            Name = "example.com.", Type = "TXT", Ttl = 600, Values = [val]
+            Name = "example.com.",
+            Type = "TXT",
+            Ttl = 600,
+            Values = [val]
         });
 
         var parsed = RoundtripParsed(zone);
@@ -214,7 +244,10 @@ public class ZoneYamlSerializerEdgeCaseTests
         const string val = "say \"hi\"";
         var zone = MakeZone(new TxtRecord
         {
-            Name = "example.com.", Type = "TXT", Ttl = 600, Values = [val]
+            Name = "example.com.",
+            Type = "TXT",
+            Ttl = 600,
+            Values = [val]
         });
 
         var parsed = RoundtripParsed(zone);
@@ -229,7 +262,10 @@ public class ZoneYamlSerializerEdgeCaseTests
         // produces no records. This test documents the known behavior.
         var zone = MakeZone(new TxtRecord
         {
-            Name = "example.com.", Type = "TXT", Ttl = 600, Values = [""]
+            Name = "example.com.",
+            Type = "TXT",
+            Ttl = 600,
+            Values = [""]
         });
 
         var yaml = ZoneYamlSerializer.Serialize(zone);
@@ -248,7 +284,10 @@ public class ZoneYamlSerializerEdgeCaseTests
         const string val = ":::###\\\"\\\"";
         var zone = MakeZone(new TxtRecord
         {
-            Name = "example.com.", Type = "TXT", Ttl = 600, Values = [val]
+            Name = "example.com.",
+            Type = "TXT",
+            Ttl = 600,
+            Values = [val]
         });
 
         var parsed = RoundtripParsed(zone);
@@ -262,7 +301,10 @@ public class ZoneYamlSerializerEdgeCaseTests
         var val = "v=DKIM1; k=rsa; p=" + new string('A', 200);
         var zone = MakeZone(new TxtRecord
         {
-            Name = "mail._domainkey.example.com.", Type = "TXT", Ttl = 300, Values = [val]
+            Name = "mail._domainkey.example.com.",
+            Type = "TXT",
+            Ttl = 300,
+            Values = [val]
         });
 
         var parsed = RoundtripParsed(zone);
@@ -276,7 +318,10 @@ public class ZoneYamlSerializerEdgeCaseTests
     {
         var zone = MakeZone(new ARecord
         {
-            Name = "example.com.", Type = "A", Ttl = 300, Addresses = ["1.2.3.4"]
+            Name = "example.com.",
+            Type = "A",
+            Ttl = 300,
+            Addresses = ["1.2.3.4"]
         });
 
         var yaml = ZoneYamlSerializer.Serialize(zone, providerName: "cloudflare");
@@ -289,7 +334,10 @@ public class ZoneYamlSerializerEdgeCaseTests
     {
         var zone = MakeZone(new ARecord
         {
-            Name = "example.com.", Type = "A", Ttl = 300, Addresses = ["1.2.3.4"]
+            Name = "example.com.",
+            Type = "A",
+            Ttl = 300,
+            Addresses = ["1.2.3.4"]
         });
 
         var yaml = ZoneYamlSerializer.Serialize(zone, providerName: null);

@@ -246,7 +246,7 @@ public class ZoneDiffEdgeCaseTests
             {
                 Name = "alias.example.com.",
                 Type = "CNAME",
-                Ttl  = 300,
+                Ttl = 300,
                 Target = "host.example.com."
             });
 

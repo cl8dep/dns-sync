@@ -39,14 +39,14 @@ public class ZoneResolverTests : IDisposable
             Providers = new()
             {
                 ["yaml_src"] = new() { Type = "yaml", Directory = _dir },
-                ["cf"]       = new() { Type = "cloudflare", ApiToken = "tok" },
+                ["cf"] = new() { Type = "cloudflare", ApiToken = "tok" },
             },
             ZoneGroups = new()
             {
                 ["all"] = new()
                 {
-                    Source         = groupSource,
-                    Targets        = ["cf"],
+                    Source = groupSource,
+                    Targets = ["cf"],
                     IncludePattern = includePattern,
                     ExcludePattern = excludePattern,
                 }
@@ -61,7 +61,7 @@ public class ZoneResolverTests : IDisposable
         var config = new DnsSyncConfig
         {
             Providers = new() { ["cf"] = new() { Type = "cloudflare", ApiToken = "tok" } },
-            Zones     = new() { ["example.com."] = new() { Source = "cf", Targets = ["cf"] } }
+            Zones = new() { ["example.com."] = new() { Source = "cf", Targets = ["cf"] } }
         };
 
         var result = await _resolver.ResolveAsync(config, default);
@@ -265,7 +265,7 @@ public class ZoneResolverTests : IDisposable
                 {
                     ["yaml1"] = new() { Type = "yaml", Directory = _dir },
                     ["yaml2"] = new() { Type = "yaml", Directory = dir2 },
-                    ["cf"]    = new() { Type = "cloudflare", ApiToken = "tok" },
+                    ["cf"] = new() { Type = "cloudflare", ApiToken = "tok" },
                 },
                 ZoneGroups = new()
                 {
@@ -301,8 +301,8 @@ public class ZoneResolverTests : IDisposable
                 {
                     ["yaml1"] = new() { Type = "yaml", Directory = _dir },
                     ["yaml2"] = new() { Type = "yaml", Directory = dir2 },
-                    ["cf"]    = new() { Type = "cloudflare", ApiToken = "tok" },
-                    ["pb"]    = new() { Type = "porkbun", ApiKey = "k", SecretKey = "s" },
+                    ["cf"] = new() { Type = "cloudflare", ApiToken = "tok" },
+                    ["pb"] = new() { Type = "porkbun", ApiKey = "k", SecretKey = "s" },
                 },
                 ZoneGroups = new()
                 {
@@ -335,9 +335,9 @@ public class ZoneResolverTests : IDisposable
             Providers = new()
             {
                 ["missing"] = new() { Type = "yaml", Directory = "/nonexistent-xyz-path" },
-                ["cf"]      = new() { Type = "cloudflare", ApiToken = "tok" },
+                ["cf"] = new() { Type = "cloudflare", ApiToken = "tok" },
             },
-            Zones      = new() { ["explicit.com."] = new() { Source = "cf", Targets = ["cf"] } },
+            Zones = new() { ["explicit.com."] = new() { Source = "cf", Targets = ["cf"] } },
             ZoneGroups = new() { ["bad"] = new() { Source = "missing", Targets = ["cf"] } }
         };
 
