@@ -25,4 +25,8 @@ public class ImportSettings : BaseSettings
     [CommandOption("-f|--force")]
     [Description("Overwrite existing zone files")]
     public bool Force { get; set; }
+
+    [CommandOption("--no-config-update")]
+    [Description("Skip updating the config file with imported zones")]
+    public bool NoConfigUpdate { get; set; }
 }
