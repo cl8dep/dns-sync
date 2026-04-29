@@ -62,6 +62,7 @@ public class ImportCommand(ILoggerFactory loggerFactory) : AsyncCommand<ImportSe
 
             var imported = 0;
             var skipped = 0;
+            var importedZones = new List<string>();
 
             foreach (var zoneName in zones)
             {
@@ -83,13 +84,49 @@ public class ImportCommand(ILoggerFactory loggerFactory) : AsyncCommand<ImportSe
                         return await provider.GetZoneAsync(zoneName, cancellationToken);
                     });
 
-                var yaml = ZoneYamlSerializer.Serialize(zone);
+                var yaml = ZoneYamlSerializer.Serialize(zone, settings.Provider);
                 await File.WriteAllTextAsync(outputPath, yaml, cancellationToken);
 
                 AnsiConsole.MarkupLine(
                     $"  [green]+[/] {Markup.Escape(zoneName)} → [dim]{Markup.Escape(outputPath)}[/] " +
                     $"([bold]{zone.Records.Count}[/] record(s))");
                 imported++;
+                importedZones.Add(zoneName);
+            }
+
+            if (!settings.NoConfigUpdate && importedZones.Count > 0)
+            {
+                var configPath = Path.GetFullPath(settings.ConfigPath);
+                var configText = await File.ReadAllTextAsync(configPath, cancellationToken);
+                var added = 0;
+                var alreadyInConfig = 0;
+                var appendBuilder = new System.Text.StringBuilder();
+
+                foreach (var zoneName in importedZones)
+                {
+                    if (config.Zones.ContainsKey(zoneName))
+                    {
+                        alreadyInConfig++;
+                        continue;
+                    }
+
+                    appendBuilder.AppendLine($"  {zoneName}:");
+                    appendBuilder.AppendLine($"    source: {settings.Provider}");
+                    appendBuilder.AppendLine($"    targets: []");
+                    added++;
+                }
+
+                if (added > 0)
+                {
+                    configText = configText.TrimEnd() + "\n" + appendBuilder.ToString().TrimEnd() + "\n";
+                    await File.WriteAllTextAsync(configPath, configText, cancellationToken);
+                }
+
+                AnsiConsole.WriteLine();
+                if (added > 0)
+                    AnsiConsole.MarkupLine($"[green]✓[/] Added [bold]{added}[/] zone(s) to config");
+                if (alreadyInConfig > 0)
+                    AnsiConsole.MarkupLine($"[yellow]~[/] Skipped [bold]{alreadyInConfig}[/] zone(s) (already in config)");
             }
 
             AnsiConsole.WriteLine();

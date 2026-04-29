@@ -10,11 +10,12 @@ namespace DnsSync.Providers.Yaml;
 /// </summary>
 public static class ZoneYamlSerializer
 {
-    public static string Serialize(DnsZone zone)
+    public static string Serialize(DnsZone zone, string? providerName = null)
     {
         var sb = new StringBuilder();
         sb.AppendLine($"# Zone: {zone.Name}");
-        sb.AppendLine($"# Imported by dns-sync on {DateTime.UtcNow:yyyy-MM-dd}");
+        var fromClause = providerName is not null ? $"from {providerName} " : "";
+        sb.AppendLine($"# Imported {fromClause}by dns-sync on {DateTime.UtcNow:yyyy-MM-dd}");
         sb.AppendLine();
 
         // Group records by subdomain key for output
