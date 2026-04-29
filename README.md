@@ -1,6 +1,8 @@
 # dns-sync
 
 [![CI](https://github.com/cl8dep/dns-sync/actions/workflows/ci.yml/badge.svg)](https://github.com/cl8dep/dns-sync/actions/workflows/ci.yml)
+[![Coverage](https://codecov.io/gh/cl8dep/dns-sync/graph/badge.svg)](https://codecov.io/gh/cl8dep/dns-sync)
+[![Tests](https://img.shields.io/badge/tests-367%20passing-brightgreen)](https://github.com/cl8dep/dns-sync/actions/workflows/ci.yml)
 [![Release](https://img.shields.io/github/v/release/cl8dep/dns-sync)](https://github.com/cl8dep/dns-sync/releases/latest)
 [![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 
