@@ -33,9 +33,11 @@ public static class CommandHelpers
         }
 
         var zoneCount = config.Zones.Count;
+        var groupCount = config.ZoneGroups.Count;
         var providerCount = config.Providers.Count;
+        var groupPart = groupCount > 0 ? $", [bold]{groupCount}[/] zone group(s)" : "";
         AnsiConsole.MarkupLine(
-            $"[green]✓[/] Config valid ([bold]{zoneCount}[/] zone(s), [bold]{providerCount}[/] provider(s))");
+            $"[green]✓[/] Config valid ([bold]{zoneCount}[/] zone(s){groupPart}, [bold]{providerCount}[/] provider(s))");
 
         return config;
     }

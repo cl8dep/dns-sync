@@ -1,3 +1,4 @@
+using DnsSync.Core;
 using DnsSync.Providers;
 using DnsSync.Providers.Yaml;
 using DnsSync.Validation;
@@ -6,7 +7,7 @@ using Spectre.Console.Cli;
 
 namespace DnsSync.Commands;
 
-public class ValidateCommand : AsyncCommand<BaseSettings>
+public class ValidateCommand(IZoneResolver zoneResolver) : AsyncCommand<BaseSettings>
 {
     protected override async Task<int> ExecuteAsync(CommandContext context, BaseSettings settings, CancellationToken cancellationToken)
     {
@@ -16,7 +17,8 @@ public class ValidateCommand : AsyncCommand<BaseSettings>
 
             // Validate each zone file via YamlProvider
             var hasErrors = false;
-            foreach (var (zoneName, zoneConfig) in config.Zones)
+            var zones = await zoneResolver.ResolveAsync(config, cancellationToken);
+            foreach (var (zoneName, zoneConfig) in zones)
             {
                 var sourceProvider = config.Providers[zoneConfig.Source];
                 if (!string.Equals(sourceProvider.Type, "yaml", StringComparison.OrdinalIgnoreCase))
