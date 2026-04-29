@@ -295,6 +295,203 @@ public class ConfigLoaderTests
         errors.ShouldBeEmpty();
     }
 
+    // ── zone_groups: parsing ──────────────────────────────────────────────────
+
+    [Fact]
+    public void Load_ZoneGroups_ParsesCorrectly()
+    {
+        var config = Deserialize("""
+            providers:
+              yaml_src:
+                type: yaml
+                directory: ./zones
+              cf:
+                type: cloudflare
+                api_token: tok
+            zone_groups:
+              all-com:
+                source: yaml_src
+                targets:
+                  - cf
+                include_pattern: ".*\\.com\\."
+                exclude_pattern: "staging\\..*"
+            """);
+
+        config.ZoneGroups.Count.ShouldBe(1);
+        config.ZoneGroups.ShouldContainKey("all-com");
+        var g = config.ZoneGroups["all-com"];
+        g.Source.ShouldBe("yaml_src");
+        g.Targets.ShouldContain("cf");
+        g.IncludePattern.ShouldBe(".*\\.com\\.");
+        g.ExcludePattern.ShouldBe("staging\\..*");
+    }
+
+    [Fact]
+    public void Load_ZoneGroups_WithoutPatterns_HasNullPatterns()
+    {
+        var config = Deserialize("""
+            providers:
+              yaml_src:
+                type: yaml
+                directory: ./zones
+              cf:
+                type: cloudflare
+                api_token: tok
+            zone_groups:
+              all:
+                source: yaml_src
+                targets:
+                  - cf
+            """);
+
+        var g = config.ZoneGroups["all"];
+        g.IncludePattern.ShouldBeNull();
+        g.ExcludePattern.ShouldBeNull();
+    }
+
+    // ── zone_groups: ValidateStructure ────────────────────────────────────────
+
+    [Fact]
+    public void ValidateStructure_ZoneGroups_ValidConfig_ReturnsNoErrors()
+    {
+        var config = Deserialize("""
+            providers:
+              yaml_src:
+                type: yaml
+                directory: ./zones
+              cf:
+                type: cloudflare
+                api_token: tok
+            zone_groups:
+              all:
+                source: yaml_src
+                targets:
+                  - cf
+            """);
+
+        ConfigLoader.ValidateStructure(config).ShouldBeEmpty();
+    }
+
+    [Fact]
+    public void ValidateStructure_NoZonesButHasZoneGroups_IsValid()
+    {
+        var config = Deserialize("""
+            providers:
+              yaml_src:
+                type: yaml
+                directory: ./zones
+              cf:
+                type: cloudflare
+                api_token: tok
+            zone_groups:
+              all:
+                source: yaml_src
+                targets:
+                  - cf
+            """);
+
+        // zone_groups alone satisfies the "at least zones or zone_groups" requirement
+        ConfigLoader.ValidateStructure(config).ShouldBeEmpty();
+    }
+
+    [Fact]
+    public void ValidateStructure_ZoneGroups_UnknownSource_ReturnsError()
+    {
+        var config = Deserialize("""
+            providers:
+              cf:
+                type: cloudflare
+                api_token: tok
+            zone_groups:
+              all:
+                source: nonexistent
+                targets:
+                  - cf
+            """);
+
+        var errors = ConfigLoader.ValidateStructure(config);
+        errors.ShouldContain(e => e.Contains("nonexistent") && e.Contains("source"));
+    }
+
+    [Fact]
+    public void ValidateStructure_ZoneGroups_UnknownTarget_ReturnsError()
+    {
+        var config = Deserialize("""
+            providers:
+              yaml_src:
+                type: yaml
+                directory: ./zones
+            zone_groups:
+              all:
+                source: yaml_src
+                targets:
+                  - ghost_provider
+            """);
+
+        var errors = ConfigLoader.ValidateStructure(config);
+        errors.ShouldContain(e => e.Contains("ghost_provider"));
+    }
+
+    [Fact]
+    public void ValidateStructure_ZoneGroups_SameSourceAndTarget_ReturnsError()
+    {
+        var config = Deserialize("""
+            providers:
+              cf:
+                type: cloudflare
+                api_token: tok
+            zone_groups:
+              all:
+                source: cf
+                targets:
+                  - cf
+            """);
+
+        var errors = ConfigLoader.ValidateStructure(config);
+        errors.ShouldContain(e => e.Contains("source and target") || e.Contains("both source"));
+    }
+
+    [Fact]
+    public void ValidateStructure_ZoneGroups_ReadOnlyTarget_ReturnsError()
+    {
+        var config = Deserialize("""
+            providers:
+              yaml_src:
+                type: yaml
+                directory: ./zones
+              readonly_cf:
+                type: cloudflare
+                api_token: tok
+                readonly: true
+            zone_groups:
+              all:
+                source: yaml_src
+                targets:
+                  - readonly_cf
+            """);
+
+        var errors = ConfigLoader.ValidateStructure(config);
+        errors.ShouldContain(e => e.Contains("read-only") || e.Contains("readonly"));
+    }
+
+    [Fact]
+    public void ValidateStructure_ZoneGroups_EmptyTargets_ReturnsError()
+    {
+        var config = Deserialize("""
+            providers:
+              yaml_src:
+                type: yaml
+                directory: ./zones
+            zone_groups:
+              all:
+                source: yaml_src
+                targets: []
+            """);
+
+        var errors = ConfigLoader.ValidateStructure(config);
+        errors.ShouldContain(e => e.Contains("target") || e.Contains("all"));
+    }
+
     private static DnsSyncConfig Deserialize(string yaml)
     {
         var tmp = Path.GetTempFileName();
