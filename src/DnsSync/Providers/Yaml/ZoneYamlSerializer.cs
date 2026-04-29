@@ -116,13 +116,25 @@ public static class ZoneYamlSerializer
     {
         if (values.Count == 1)
         {
-            sb.AppendLine($"{indent}value: {values[0]}");
+            sb.AppendLine($"{indent}value: {QuoteScalar(values[0])}");
             return;
         }
 
         sb.AppendLine($"{indent}values:");
         foreach (var v in values)
-            sb.AppendLine($"{indent}  - {v}");
+            sb.AppendLine($"{indent}  - {QuoteScalar(v)}");
+    }
+
+    // Quote a plain scalar if it contains characters that YAML reserves at the start of a token
+    // or that would be ambiguous mid-value (@, `, and strings with spaces or YAML special chars).
+    private static string QuoteScalar(string value)
+    {
+        if (value.Length == 0) return "\"\"";
+        var first = value[0];
+        if (first == '@' || first == '`' || value.Contains(' ') || value.Contains(':') ||
+            value.Contains('#') || value.Contains('"') || value.Contains('\\'))
+            return $"\"{value.Replace("\\", "\\\\").Replace("\"", "\\\"")}\"";
+        return value;
     }
 
     private static void AppendQuotedStringList(StringBuilder sb, IReadOnlyList<string> values, string indent)
