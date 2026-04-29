@@ -6,7 +6,7 @@ using Spectre.Console.Cli;
 
 namespace DnsSync.Commands;
 
-public class ImportCommand(ILoggerFactory loggerFactory) : AsyncCommand<ImportSettings>
+public class ImportCommand(ILoggerFactory loggerFactory, IProviderFactory providerFactory) : AsyncCommand<ImportSettings>
 {
     protected override async Task<int> ExecuteAsync(
         CommandContext context, ImportSettings settings, CancellationToken cancellationToken)
@@ -33,7 +33,7 @@ public class ImportCommand(ILoggerFactory loggerFactory) : AsyncCommand<ImportSe
                 return 1;
             }
 
-            var provider = ProviderFactory.Create(settings.Provider, providerConfig, loggerFactory);
+            var provider = providerFactory.Create(settings.Provider, providerConfig, loggerFactory);
 
             AnsiConsole.MarkupLine($"\nRunning pre-flight for [bold]{Markup.Escape(settings.Provider)}[/]...");
             await provider.PreflightAsync(cancellationToken);

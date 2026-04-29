@@ -8,25 +8,30 @@ using Spectre.Console.Cli;
 
 namespace DnsSync.Commands;
 
-public class PlanCommand(ILoggerFactory loggerFactory, IZoneResolver zoneResolver) : AsyncCommand<PlanSettings>
+public class PlanCommand(ILoggerFactory loggerFactory, IZoneResolver zoneResolver, IProviderFactory providerFactory) : AsyncCommand<PlanSettings>
 {
     protected override async Task<int> ExecuteAsync(CommandContext context, PlanSettings settings, CancellationToken cancellationToken)
     {
-        var output = settings.Output.ToLowerInvariant();
-        if (output is not ("color" or "plain" or "diff" or "json"))
-            throw new InvalidOperationException($"Unknown --output value '{settings.Output}'. Valid values: color, plain, diff, json.");
-        var jsonMode = output == "json";
-        var useSpinners = !jsonMode && !settings.GcpLogs && !settings.Verbose;
-
         try
         {
+            var output = settings.Output.ToLowerInvariant();
+            if (output is not ("color" or "plain" or "diff" or "json"))
+                throw new InvalidOperationException($"Unknown --output value '{settings.Output}'. Valid values: color, plain, diff, json.");
+            var jsonMode = output == "json";
+            var useSpinners = !jsonMode && !settings.GcpLogs && !settings.Verbose;
+
             var config = CommandHelpers.LoadAndValidateConfig(settings);
 
             var allZones = await zoneResolver.ResolveAsync(config, cancellationToken);
 
             var zonesToProcess = allZones.AsEnumerable();
-            if (!string.IsNullOrWhiteSpace(settings.Zone))
+            if (settings.Zone is not null)
             {
+                if (string.IsNullOrWhiteSpace(settings.Zone))
+                {
+                    AnsiConsole.MarkupLine("[red]✗[/] --zone value cannot be empty or whitespace.");
+                    return 1;
+                }
                 if (!allZones.ContainsKey(settings.Zone))
                 {
                     AnsiConsole.MarkupLine($"[red]✗[/] Zone '{Markup.Escape(settings.Zone)}' not found in config.");
@@ -49,7 +54,7 @@ public class PlanCommand(ILoggerFactory loggerFactory, IZoneResolver zoneResolve
 
             foreach (var (zoneName, zoneConfig) in zonesToProcess)
             {
-                var sourceProvider = ProviderFactory.Create(
+                var sourceProvider = providerFactory.Create(
                     zoneConfig.Source, config.Providers[zoneConfig.Source], loggerFactory);
 
                 if (useSpinners)
@@ -82,7 +87,7 @@ public class PlanCommand(ILoggerFactory loggerFactory, IZoneResolver zoneResolve
 
                 foreach (var targetName in zoneConfig.Targets)
                 {
-                    var targetProvider = ProviderFactory.Create(
+                    var targetProvider = providerFactory.Create(
                         targetName, config.Providers[targetName], loggerFactory);
 
                     try

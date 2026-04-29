@@ -17,4 +17,8 @@ public class DriftSettings : BaseSettings
     [Description("Output format: color (default), plain, json, or silent")]
     [DefaultValue("color")]
     public string Output { get; set; } = "color";
+
+    [CommandOption("-z|--zone <ZONE>")]
+    [Description("Only check a single zone (e.g. example.com.)")]
+    public string? Zone { get; set; }
 }

@@ -7,7 +7,7 @@ using Spectre.Console.Cli;
 
 namespace DnsSync.Commands;
 
-public class ApplyCommand(ILoggerFactory loggerFactory, IZoneResolver zoneResolver) : AsyncCommand<ApplySettings>
+public class ApplyCommand(ILoggerFactory loggerFactory, IZoneResolver zoneResolver, IProviderFactory providerFactory) : AsyncCommand<ApplySettings>
 {
     protected override async Task<int> ExecuteAsync(CommandContext context, ApplySettings settings, CancellationToken cancellationToken)
     {
@@ -51,7 +51,7 @@ public class ApplyCommand(ILoggerFactory loggerFactory, IZoneResolver zoneResolv
 
             foreach (var (zoneName, zoneConfig) in zonesToProcess)
             {
-                var sourceProvider = ProviderFactory.Create(
+                var sourceProvider = providerFactory.Create(
                     zoneConfig.Source, config.Providers[zoneConfig.Source], loggerFactory);
 
                 if (useSpinners)
@@ -73,7 +73,7 @@ public class ApplyCommand(ILoggerFactory loggerFactory, IZoneResolver zoneResolv
 
                 foreach (var targetName in zoneConfig.Targets)
                 {
-                    var targetProvider = ProviderFactory.Create(
+                    var targetProvider = providerFactory.Create(
                         targetName, config.Providers[targetName], loggerFactory);
 
                     try
@@ -225,7 +225,7 @@ public class ApplyCommand(ILoggerFactory loggerFactory, IZoneResolver zoneResolv
                 return 1;
             }
 
-            var provider = ProviderFactory.Create(savedZone.Target, providerConfig, loggerFactory);
+            var provider = providerFactory.Create(savedZone.Target, providerConfig, loggerFactory);
             var plan = PlanFileSerializer.ToDnsPlan(savedZone);
             plans.Add((savedZone.Zone, savedZone.Target, plan, provider));
         }
