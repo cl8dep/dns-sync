@@ -247,4 +247,45 @@ public class PorkbunProviderTests
         deleteReq.RequestUri!.AbsolutePath.ShouldContain("delete");
         deleteReq.RequestUri!.AbsolutePath.ShouldContain("del-id");
     }
+
+    [Fact]
+    public async Task ApplyPlanAsync_Update_MatchesExistingIdByFqdn()
+    {
+        // Validates the BuildFqdn fix in GetExistingRecordIds: Porkbun returns record
+        // names as bare subdomains ("www"), but RecordChange.RecordName is a full FQDN
+        // ("www.example.com."). The lookup must match correctly or the update silently
+        // falls back to Create.
+        var handler = new FakeHttpHandler();
+        // GetExistingRecordIds — name is bare subdomain as Porkbun returns it
+        handler.Enqueue("""
+            {"status":"SUCCESS","records":[
+              {"id":"existing-id","name":"www","type":"A","content":"1.1.1.1","ttl":"300"}
+            ]}
+            """);
+        // Edit call
+        handler.Enqueue("""{"status":"SUCCESS"}""");
+
+        var plan = new DnsPlan
+        {
+            Changes =
+            [
+                new RecordChange
+                {
+                    ChangeType = ChangeType.Update,
+                    Before = new ARecord { Name = "www.example.com.", Type = "A", Ttl = 300, Addresses = ["1.1.1.1"] },
+                    After = new ARecord { Name = "www.example.com.", Type = "A", Ttl = 300, Addresses = ["2.2.2.2"] }
+                }
+            ]
+        };
+
+        var result = await Make(handler).ApplyPlanAsync(ZoneName, plan);
+
+        result.Applied.ShouldBe(1);
+        result.Failed.ShouldBe(0);
+        // Must have used the edit endpoint (not create), proving the ID lookup succeeded
+        var editReq = handler.Requests.Last();
+        editReq.Method.ShouldBe(HttpMethod.Post);
+        editReq.RequestUri!.AbsolutePath.ShouldContain("edit");
+        editReq.RequestUri!.AbsolutePath.ShouldContain("existing-id");
+    }
 }

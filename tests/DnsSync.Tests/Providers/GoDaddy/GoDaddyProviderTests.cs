@@ -242,6 +242,32 @@ public class GoDaddyProviderTests
         handler.LastRequest.Method.ShouldBe(HttpMethod.Delete);
     }
 
+    [Fact]
+    public async Task ApplyPlanAsync_Update_SendsPutRequest()
+    {
+        var handler = new FakeHttpHandler();
+        handler.Enqueue(HttpStatusCode.OK, "");
+
+        var plan = new DnsPlan
+        {
+            Changes =
+            [
+                new RecordChange
+                {
+                    ChangeType = ChangeType.Update,
+                    Before = new ARecord { Name = "www.example.com.", Type = "A", Ttl = 300, Addresses = ["1.1.1.1"] },
+                    After = new ARecord { Name = "www.example.com.", Type = "A", Ttl = 300, Addresses = ["2.2.2.2"] }
+                }
+            ]
+        };
+
+        var result = await Make(handler).ApplyPlanAsync(ZoneName, plan);
+
+        result.Applied.ShouldBe(1);
+        handler.LastRequest.Method.ShouldBe(HttpMethod.Put);
+        handler.LastRequest.RequestUri!.AbsolutePath.ShouldContain("/v1/domains/example.com/records/A/www");
+    }
+
     // ── Error handling ────────────────────────────────────────────────────────
 
     [Fact]

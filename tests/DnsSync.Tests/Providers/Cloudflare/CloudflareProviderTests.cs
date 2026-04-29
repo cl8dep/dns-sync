@@ -153,6 +153,21 @@ public class CloudflareProviderTests
     }
 
     [Fact]
+    public async Task GetZoneAsync_TtlOne_IsNormalizedTo300()
+    {
+        // Cloudflare uses ttl=1 to mean "automatic" (~300s). The provider normalizes it.
+        var handler = new FakeHttpHandler();
+        handler.Enqueue(ZoneIdResponse(ZoneId));
+        handler.Enqueue(RecordsPage([
+            $@"{{""id"":""1"",""type"":""A"",""name"":""example.com"",""content"":""1.2.3.4"",""ttl"":1}}"
+        ], totalPages: 1));
+
+        var zone = await Make(handler).GetZoneAsync(ZoneName);
+
+        zone.Records.OfType<ARecord>().ShouldHaveSingleItem().Ttl.ShouldBe(300);
+    }
+
+    [Fact]
     public async Task GetZoneAsync_EmptyZone_ReturnsNoRecords()
     {
         var handler = new FakeHttpHandler();
@@ -234,6 +249,65 @@ public class CloudflareProviderTests
         result.Failed.ShouldBe(0);
         var postRequest = handler.Requests.Last();
         postRequest.Method.ShouldBe(HttpMethod.Post);
+    }
+
+    [Fact]
+    public async Task ApplyPlanAsync_Update_SendsPatchRequest()
+    {
+        var handler = new FakeHttpHandler();
+        handler.Enqueue(ZoneIdResponse(ZoneId));
+        // Existing record map with one record for the update to match
+        handler.Enqueue(ExistingRecordsMap([ARecordJson("www.example.com", "1.1.1.1")]));
+        // PATCH for update
+        handler.Enqueue("""{"success":true,"result":{"id":"existing-id"}}""");
+
+        var plan = new DnsPlan
+        {
+            Changes =
+            [
+                new RecordChange
+                {
+                    ChangeType = ChangeType.Update,
+                    Before = new ARecord { Name = "www.example.com.", Type = "A", Ttl = 300, Addresses = ["1.1.1.1"] },
+                    After = new ARecord { Name = "www.example.com.", Type = "A", Ttl = 300, Addresses = ["2.2.2.2"] }
+                }
+            ]
+        };
+
+        var result = await Make(handler).ApplyPlanAsync(ZoneName, plan);
+
+        result.Applied.ShouldBe(1);
+        result.Failed.ShouldBe(0);
+        handler.LastRequest.Method.ShouldBe(HttpMethod.Patch);
+        handler.LastRequest.RequestUri!.AbsolutePath.ShouldContain("dns_records");
+    }
+
+    [Fact]
+    public async Task ApplyPlanAsync_Delete_SendsDeleteRequest()
+    {
+        var handler = new FakeHttpHandler();
+        handler.Enqueue(ZoneIdResponse(ZoneId));
+        handler.Enqueue(ExistingRecordsMap([ARecordJson("www.example.com", "1.2.3.4")]));
+        // DELETE
+        handler.Enqueue("""{"success":true,"result":{"id":"id-1.2.3.4"}}""");
+
+        var plan = new DnsPlan
+        {
+            Changes =
+            [
+                new RecordChange
+                {
+                    ChangeType = ChangeType.Delete,
+                    Before = new ARecord { Name = "www.example.com.", Type = "A", Ttl = 300, Addresses = ["1.2.3.4"] }
+                }
+            ]
+        };
+
+        var result = await Make(handler).ApplyPlanAsync(ZoneName, plan);
+
+        result.Applied.ShouldBe(1);
+        handler.LastRequest.Method.ShouldBe(HttpMethod.Delete);
+        handler.LastRequest.RequestUri!.AbsolutePath.ShouldContain("dns_records");
     }
 
     [Fact]

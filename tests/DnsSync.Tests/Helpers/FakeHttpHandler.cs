@@ -33,6 +33,18 @@ internal sealed class FakeHttpHandler : HttpMessageHandler
     /// <summary>Number of responses still queued (not yet consumed).</summary>
     public int QueueDepth => _queue.Count;
 
+    /// <summary>
+    /// Asserts that all queued responses were consumed. Call at the end of a test to
+    /// catch cases where fewer HTTP requests were made than expected.
+    /// </summary>
+    public void VerifyAllConsumed()
+    {
+        if (_queue.Count > 0)
+            throw new InvalidOperationException(
+                $"FakeHttpHandler has {_queue.Count} unconsumed response(s). " +
+                "Fewer HTTP requests were made than expected.");
+    }
+
     protected override Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)
     {
         Requests.Add(request);

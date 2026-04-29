@@ -165,6 +165,28 @@ public class GcpProviderTests
     }
 
     [Fact]
+    public async Task GetZoneAsync_LongTxtValue_ParsesMultipleChunks()
+    {
+        // GCP stores TXT values > 255 bytes as adjacent quoted chunks:
+        //   "first 255 chars" "remaining chars"
+        // UnquoteTxt must concatenate them into one plain string.
+        var chunk1 = new string('a', 255);
+        var chunk2 = new string('b', 100);
+        var rrdata = $@"""{chunk1}"" ""{chunk2}""";
+
+        var handler = new FakeHttpHandler();
+        handler.Enqueue(ManagedZoneLookupJson(ManagedZoneName));
+        handler.Enqueue(RrsetsJson([
+            TxtRecordJson("example.com.", rrdata, 300)
+        ]));
+
+        var zone = await Make(handler).GetZoneAsync(ZoneName);
+
+        var txt = zone.Records.OfType<TxtRecord>().ShouldHaveSingleItem();
+        txt.Values[0].ShouldBe(chunk1 + chunk2);
+    }
+
+    [Fact]
     public async Task GetZoneAsync_EmptyZone_ReturnsNoRecords()
     {
         var handler = new FakeHttpHandler();
@@ -233,6 +255,62 @@ public class GcpProviderTests
         result.Failed.ShouldBe(0);
         handler.LastRequest.Method.ShouldBe(HttpMethod.Post);
         handler.LastRequest.RequestUri!.AbsolutePath.ShouldContain("changes");
+    }
+
+    [Fact]
+    public async Task ApplyPlanAsync_Update_SendsAtomicDeleteAndAdd()
+    {
+        var handler = new FakeHttpHandler();
+        handler.Enqueue(ManagedZoneLookupJson(ManagedZoneName));
+        handler.Enqueue("""{"id":"change-2","status":"pending"}""");
+
+        var plan = new DnsPlan
+        {
+            Changes =
+            [
+                new RecordChange
+                {
+                    ChangeType = ChangeType.Update,
+                    Before = new ARecord { Name = "www.example.com.", Type = "A", Ttl = 300, Addresses = ["1.1.1.1"] },
+                    After = new ARecord { Name = "www.example.com.", Type = "A", Ttl = 300, Addresses = ["2.2.2.2"] }
+                }
+            ]
+        };
+
+        var result = await Make(handler).ApplyPlanAsync(ZoneName, plan);
+
+        result.Applied.ShouldBe(1);
+        handler.LastRequest.Method.ShouldBe(HttpMethod.Post);
+        // GCP Update = atomic delete old + add new in the same Changes request
+        var body = await handler.LastRequest.Content!.ReadAsStringAsync();
+        body.ShouldContain("additions");
+        body.ShouldContain("deletions");
+    }
+
+    [Fact]
+    public async Task ApplyPlanAsync_Delete_SendsDeletionRequest()
+    {
+        var handler = new FakeHttpHandler();
+        handler.Enqueue(ManagedZoneLookupJson(ManagedZoneName));
+        handler.Enqueue("""{"id":"change-3","status":"pending"}""");
+
+        var plan = new DnsPlan
+        {
+            Changes =
+            [
+                new RecordChange
+                {
+                    ChangeType = ChangeType.Delete,
+                    Before = new ARecord { Name = "www.example.com.", Type = "A", Ttl = 300, Addresses = ["1.2.3.4"] }
+                }
+            ]
+        };
+
+        var result = await Make(handler).ApplyPlanAsync(ZoneName, plan);
+
+        result.Applied.ShouldBe(1);
+        var body = await handler.LastRequest.Content!.ReadAsStringAsync();
+        body.ShouldContain("deletions");
     }
 
     // ── Error handling ────────────────────────────────────────────────────────
