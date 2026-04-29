@@ -40,12 +40,12 @@ public class ConfigValidatorTests
         {
             Providers = new()
             {
-                ["cf"]      = new ProviderConfig { Type = "cloudflare",    ApiToken = "tok" },
-                ["gcp"]     = new ProviderConfig { Type = "gcp_cloud_dns" },
-                ["pb"]      = new ProviderConfig { Type = "porkbun",       ApiKey = "k", SecretKey = "s" },
-                ["r53"]     = new ProviderConfig { Type = "route53" },
-                ["gd"]      = new ProviderConfig { Type = "godaddy",       ApiKey = "k", SecretKey = "s" },
-                ["local"]   = new ProviderConfig { Type = "yaml",          Directory = "/zones" },
+                ["cf"] = new ProviderConfig { Type = "cloudflare", ApiToken = "tok" },
+                ["gcp"] = new ProviderConfig { Type = "gcp_cloud_dns" },
+                ["pb"] = new ProviderConfig { Type = "porkbun", ApiKey = "k", SecretKey = "s" },
+                ["r53"] = new ProviderConfig { Type = "route53" },
+                ["gd"] = new ProviderConfig { Type = "godaddy", ApiKey = "k", SecretKey = "s" },
+                ["local"] = new ProviderConfig { Type = "yaml", Directory = "/zones" },
             },
             Zones = new()
             {
