@@ -218,7 +218,9 @@ public class GcpProviderTests
         handler.Enqueue(ManagedZoneLookupJson(ManagedZoneName));
         handler.Enqueue("""{"id":"change-1","status":"pending"}""");
 
-        var plan = new DnsPlan { Changes = [new RecordChange
+        var plan = new DnsPlan
+        {
+            Changes = [new RecordChange
         {
             ChangeType = ChangeType.Create,
             After = new ARecord { Name = "www.example.com.", Type = "A", Ttl = 300, Addresses = ["1.2.3.4"] }
@@ -271,7 +273,7 @@ public class GcpProviderTests
 
     private static string TxtRecordJson(string name, string rrdata, int ttl) =>
         // rrdata must be a JSON string value, e.g. "\"v=spf1 ~all\""
-        $@"{{""name"":""{name}"",""type"":""TXT"",""ttl"":{ttl},""rrdatas"":[{System.Text.Json.JsonSerializer.Serialize(rrdata)}]}}";    private static string RrsetJson(string name, string type, int ttl, IEnumerable<string> values)
+        $@"{{""name"":""{name}"",""type"":""TXT"",""ttl"":{ttl},""rrdatas"":[{System.Text.Json.JsonSerializer.Serialize(rrdata)}]}}"; private static string RrsetJson(string name, string type, int ttl, IEnumerable<string> values)
     {
         var vals = string.Join(",", values.Select(v => $@"""{v}"""));
         return $@"{{""name"":""{name}"",""type"":""{type}"",""ttl"":{ttl},""rrdatas"":[{vals}]}}";

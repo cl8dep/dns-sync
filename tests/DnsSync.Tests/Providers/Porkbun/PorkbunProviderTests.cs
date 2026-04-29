@@ -199,7 +199,9 @@ public class PorkbunProviderTests
         // Create call
         handler.Enqueue("""{"status":"SUCCESS","id":"new-id"}""");
 
-        var plan = new DnsPlan { Changes = [new RecordChange
+        var plan = new DnsPlan
+        {
+            Changes = [new RecordChange
         {
             ChangeType = ChangeType.Create,
             After = new ARecord { Name = "www.example.com.", Type = "A", Ttl = 300, Addresses = ["1.2.3.4"] }

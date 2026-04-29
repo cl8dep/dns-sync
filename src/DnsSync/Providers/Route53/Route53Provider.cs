@@ -38,7 +38,8 @@ public class Route53Provider : IProvider
         string? sessionToken = null,
         string? hostedZoneId = null)
         : this(accessKeyId, secretAccessKey, region, logger,
-               new HttpClient { Timeout = TimeSpan.FromSeconds(30) }, sessionToken, hostedZoneId) { }
+               new HttpClient { Timeout = TimeSpan.FromSeconds(30) }, sessionToken, hostedZoneId)
+    { }
 
     internal Route53Provider(
         string accessKeyId,
