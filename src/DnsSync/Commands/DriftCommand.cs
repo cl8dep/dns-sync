@@ -7,7 +7,7 @@ using Spectre.Console.Cli;
 
 namespace DnsSync.Commands;
 
-public class DriftCommand(ILoggerFactory loggerFactory) : AsyncCommand<DriftSettings>
+public class DriftCommand(ILoggerFactory loggerFactory, IZoneResolver zoneResolver) : AsyncCommand<DriftSettings>
 {
     protected override async Task<int> ExecuteAsync(
         CommandContext context, DriftSettings settings, CancellationToken cancellationToken)
@@ -29,7 +29,8 @@ public class DriftCommand(ILoggerFactory loggerFactory) : AsyncCommand<DriftSett
             var hasErrors = false;
             var jsonZones = new List<object>();
 
-            foreach (var (zoneName, zoneConfig) in config.Zones)
+            var zones = await zoneResolver.ResolveAsync(config, cancellationToken);
+            foreach (var (zoneName, zoneConfig) in zones)
             {
                 var sourceProvider = ProviderFactory.Create(
                     zoneConfig.Source, config.Providers[zoneConfig.Source], loggerFactory);

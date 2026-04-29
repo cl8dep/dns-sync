@@ -1,6 +1,7 @@
 using System.Reflection;
 using DnsSync.Commands;
 using DnsSync.Config;
+using DnsSync.Core;
 using DnsSync.Infrastructure;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
@@ -97,6 +98,8 @@ var services = new ServiceCollection();
 services.AddLogging(b => b
     .ClearProviders()
     .AddSerilog(dispose: true));
+
+services.AddSingleton<IZoneResolver, ZoneResolver>();
 
 var registrar = new TypeRegistrar(services);
 var app = new CommandApp(registrar);

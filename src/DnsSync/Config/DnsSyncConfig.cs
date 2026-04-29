@@ -9,6 +9,9 @@ public class DnsSyncConfig
 
     [YamlMember(Alias = "zones")]
     public Dictionary<string, ZoneConfig> Zones { get; set; } = new();
+
+    [YamlMember(Alias = "zone_groups")]
+    public Dictionary<string, ZoneGroupConfig> ZoneGroups { get; set; } = new();
 }
 
 public class ProviderConfig
@@ -72,4 +75,21 @@ public class ZoneConfig
 
     [YamlMember(Alias = "targets")]
     public List<string> Targets { get; set; } = new();
+}
+
+public class ZoneGroupConfig
+{
+    [YamlMember(Alias = "source")]
+    public string Source { get; set; } = string.Empty;
+
+    [YamlMember(Alias = "targets")]
+    public List<string> Targets { get; set; } = new();
+
+    /// <summary>Optional regex. Only zones whose FQDN matches are included.</summary>
+    [YamlMember(Alias = "include_pattern")]
+    public string? IncludePattern { get; set; }
+
+    /// <summary>Optional regex. Zones whose FQDN matches are excluded (applied after include_pattern).</summary>
+    [YamlMember(Alias = "exclude_pattern")]
+    public string? ExcludePattern { get; set; }
 }

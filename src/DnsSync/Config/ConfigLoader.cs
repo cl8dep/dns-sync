@@ -69,8 +69,8 @@ public static class ConfigLoader
         if (config.Providers.Count == 0)
             errors.Add("No providers defined in config.");
 
-        if (config.Zones.Count == 0)
-            errors.Add("No zones defined in config.");
+        if (config.Zones.Count == 0 && config.ZoneGroups.Count == 0)
+            errors.Add("No zones or zone_groups defined in config.");
 
         foreach (var (name, provider) in config.Providers)
         {
@@ -136,6 +136,29 @@ public static class ConfigLoader
 
                 if (config.Providers.TryGetValue(target, out var targetConfig) && targetConfig.ReadOnly)
                     errors.Add($"Zone '{zoneName}' uses read-only provider '{target}' as a target — remove 'readonly: true' or use a different target.");
+            }
+        }
+
+        foreach (var (groupName, group) in config.ZoneGroups)
+        {
+            if (string.IsNullOrWhiteSpace(group.Source))
+                errors.Add($"zone_groups.{groupName}: missing 'source'.");
+            else if (!config.Providers.ContainsKey(group.Source))
+                errors.Add($"zone_groups.{groupName}: source '{group.Source}' not found in providers.");
+
+            if (group.Targets.Count == 0)
+                errors.Add($"zone_groups.{groupName}: has no target providers.");
+
+            foreach (var target in group.Targets)
+            {
+                if (!config.Providers.ContainsKey(target))
+                    errors.Add($"zone_groups.{groupName}: target '{target}' not found in providers.");
+
+                if (target == group.Source)
+                    errors.Add($"zone_groups.{groupName}: uses '{target}' as both source and target.");
+
+                if (config.Providers.TryGetValue(target, out var targetConfig) && targetConfig.ReadOnly)
+                    errors.Add($"zone_groups.{groupName}: uses read-only provider '{target}' as a target.");
             }
         }
 

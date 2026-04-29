@@ -8,7 +8,7 @@ using Spectre.Console.Cli;
 
 namespace DnsSync.Commands;
 
-public class PlanCommand(ILoggerFactory loggerFactory) : AsyncCommand<PlanSettings>
+public class PlanCommand(ILoggerFactory loggerFactory, IZoneResolver zoneResolver) : AsyncCommand<PlanSettings>
 {
     protected override async Task<int> ExecuteAsync(CommandContext context, PlanSettings settings, CancellationToken cancellationToken)
     {
@@ -22,10 +22,12 @@ public class PlanCommand(ILoggerFactory loggerFactory) : AsyncCommand<PlanSettin
         {
             var config = CommandHelpers.LoadAndValidateConfig(settings);
 
-            var zonesToProcess = config.Zones.AsEnumerable();
+            var allZones = await zoneResolver.ResolveAsync(config, cancellationToken);
+
+            var zonesToProcess = allZones.AsEnumerable();
             if (!string.IsNullOrWhiteSpace(settings.Zone))
             {
-                if (!config.Zones.ContainsKey(settings.Zone))
+                if (!allZones.ContainsKey(settings.Zone))
                 {
                     AnsiConsole.MarkupLine($"[red]✗[/] Zone '{Markup.Escape(settings.Zone)}' not found in config.");
                     return 1;
