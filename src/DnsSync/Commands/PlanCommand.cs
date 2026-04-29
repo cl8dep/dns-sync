@@ -22,6 +22,17 @@ public class PlanCommand(ILoggerFactory loggerFactory) : AsyncCommand<PlanSettin
         {
             var config = CommandHelpers.LoadAndValidateConfig(settings);
 
+            var zonesToProcess = config.Zones.AsEnumerable();
+            if (!string.IsNullOrWhiteSpace(settings.Zone))
+            {
+                if (!config.Zones.ContainsKey(settings.Zone))
+                {
+                    AnsiConsole.MarkupLine($"[red]✗[/] Zone '{Markup.Escape(settings.Zone)}' not found in config.");
+                    return 1;
+                }
+                zonesToProcess = zonesToProcess.Where(z => z.Key == settings.Zone);
+            }
+
             if (!jsonMode)
                 AnsiConsole.MarkupLine("\nRunning pre-flight checks...");
 
@@ -34,7 +45,7 @@ public class PlanCommand(ILoggerFactory loggerFactory) : AsyncCommand<PlanSettin
             // Accumulator for --save-plan
             var savedZonePlans = new List<(string ZoneName, string TargetName, DnsPlan Plan)>();
 
-            foreach (var (zoneName, zoneConfig) in config.Zones)
+            foreach (var (zoneName, zoneConfig) in zonesToProcess)
             {
                 var sourceProvider = ProviderFactory.Create(
                     zoneConfig.Source, config.Providers[zoneConfig.Source], loggerFactory);

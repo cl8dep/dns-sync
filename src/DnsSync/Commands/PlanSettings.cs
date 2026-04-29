@@ -25,4 +25,8 @@ public class PlanSettings : BaseSettings
     [CommandOption("--save-plan <PATH>")]
     [Description("Save the computed plan to a signed YAML file for later use with 'apply --from-plan'")]
     public string? SavePlan { get; set; }
+
+    [CommandOption("-z|--zone <ZONE>")]
+    [Description("Only process a single zone (e.g. example.com.) — skips preflight for all other providers")]
+    public string? Zone { get; set; }
 }
