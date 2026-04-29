@@ -7,7 +7,7 @@ using Spectre.Console.Cli;
 
 namespace DnsSync.Commands;
 
-public class DiffCommand(ILoggerFactory loggerFactory) : AsyncCommand<DiffSettings>
+public class DiffCommand(ILoggerFactory loggerFactory, IProviderFactory providerFactory) : AsyncCommand<DiffSettings>
 {
     protected override async Task<int> ExecuteAsync(CommandContext context, DiffSettings settings, CancellationToken cancellationToken)
     {
@@ -51,8 +51,8 @@ public class DiffCommand(ILoggerFactory loggerFactory) : AsyncCommand<DiffSettin
                 return 1;
             }
 
-            var fromProvider = ProviderFactory.Create(settings.From, fromConfig, loggerFactory);
-            var toProvider = ProviderFactory.Create(settings.To, toConfig, loggerFactory);
+            var fromProvider = providerFactory.Create(settings.From, fromConfig, loggerFactory);
+            var toProvider = providerFactory.Create(settings.To, toConfig, loggerFactory);
 
             if (!jsonMode)
                 AnsiConsole.MarkupLine("\nRunning pre-flight checks...");

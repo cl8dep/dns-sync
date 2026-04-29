@@ -7,32 +7,48 @@ using Spectre.Console.Cli;
 
 namespace DnsSync.Commands;
 
-public class DriftCommand(ILoggerFactory loggerFactory, IZoneResolver zoneResolver) : AsyncCommand<DriftSettings>
+public class DriftCommand(ILoggerFactory loggerFactory, IZoneResolver zoneResolver, IProviderFactory providerFactory) : AsyncCommand<DriftSettings>
 {
     protected override async Task<int> ExecuteAsync(
         CommandContext context, DriftSettings settings, CancellationToken cancellationToken)
     {
-        var output = settings.Output.ToLowerInvariant();
-        if (output is not ("color" or "plain" or "json" or "silent"))
-            throw new InvalidOperationException(
-                $"Unknown --output value '{settings.Output}'. Valid values: color, plain, json, silent.");
-
-        var jsonMode = output == "json";
-        var silent = output == "silent";
-        var useSpinners = !jsonMode && !silent && !settings.GcpLogs && !settings.Verbose;
-
         try
         {
+            var output = settings.Output.ToLowerInvariant();
+            if (output is not ("color" or "plain" or "json" or "silent"))
+                throw new InvalidOperationException(
+                    $"Unknown --output value '{settings.Output}'. Valid values: color, plain, json, silent.");
+
+            var jsonMode = output == "json";
+            var silent = output == "silent";
+            var useSpinners = !jsonMode && !silent && !settings.GcpLogs && !settings.Verbose;
+
             var config = CommandHelpers.LoadAndValidateConfig(settings);
 
             var driftDetected = false;
             var hasErrors = false;
             var jsonZones = new List<object>();
 
-            var zones = await zoneResolver.ResolveAsync(config, cancellationToken);
+            var allZones = await zoneResolver.ResolveAsync(config, cancellationToken);
+
+            if (!string.IsNullOrWhiteSpace(settings.Zone))
+            {
+                if (!allZones.ContainsKey(settings.Zone))
+                {
+                    if (!jsonMode && !silent)
+                        AnsiConsole.MarkupLine($"[red]✗[/] Zone '{Markup.Escape(settings.Zone)}' not found in config.");
+                    return 1;
+                }
+            }
+
+            var zones = string.IsNullOrWhiteSpace(settings.Zone)
+                ? allZones
+                : allZones.Where(z => z.Key == settings.Zone)
+                          .ToDictionary(z => z.Key, z => z.Value);
+
             foreach (var (zoneName, zoneConfig) in zones)
             {
-                var sourceProvider = ProviderFactory.Create(
+                var sourceProvider = providerFactory.Create(
                     zoneConfig.Source, config.Providers[zoneConfig.Source], loggerFactory);
 
                 DnsZone sourceZone;
@@ -55,7 +71,7 @@ public class DriftCommand(ILoggerFactory loggerFactory, IZoneResolver zoneResolv
 
                 foreach (var targetName in zoneConfig.Targets)
                 {
-                    var targetProvider = ProviderFactory.Create(
+                    var targetProvider = providerFactory.Create(
                         targetName, config.Providers[targetName], loggerFactory);
 
                     try
