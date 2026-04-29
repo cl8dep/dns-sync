@@ -28,6 +28,16 @@ public class ApplyCommand(ILoggerFactory loggerFactory) : AsyncCommand<ApplySett
             if (settings.FromPlan is not null)
                 return await ApplyFromPlanAsync(settings, config, cancellationToken);
 
+            var zonesToProcess = config.Zones.AsEnumerable();
+            if (!string.IsNullOrWhiteSpace(settings.Zone))
+            {
+                if (!config.Zones.ContainsKey(settings.Zone))
+                {
+                    AnsiConsole.MarkupLine($"[red]✗[/] Zone '{Markup.Escape(settings.Zone)}' not found in config.");
+                    return 1;
+                }
+                zonesToProcess = zonesToProcess.Where(z => z.Key == settings.Zone);
+            }
 
             var useSpinners = !settings.GcpLogs && !settings.Verbose;
 
@@ -37,7 +47,7 @@ public class ApplyCommand(ILoggerFactory loggerFactory) : AsyncCommand<ApplySett
             var plans = new List<(string ZoneName, string TargetName, DnsPlan Plan, IProvider Provider)>();
             var hasErrors = false;
 
-            foreach (var (zoneName, zoneConfig) in config.Zones)
+            foreach (var (zoneName, zoneConfig) in zonesToProcess)
             {
                 var sourceProvider = ProviderFactory.Create(
                     zoneConfig.Source, config.Providers[zoneConfig.Source], loggerFactory);
