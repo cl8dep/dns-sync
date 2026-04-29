@@ -16,9 +16,9 @@ public class ZoneValidatorBoundaryTests
 
     private static ARecord ARecord(int ttl) => new()
     {
-        Name      = "www.example.com.",
-        Type      = "A",
-        Ttl       = ttl,
+        Name = "www.example.com.",
+        Type = "A",
+        Ttl = ttl,
         Addresses = ["1.2.3.4"]
     };
 
@@ -77,9 +77,9 @@ public class ZoneValidatorBoundaryTests
     {
         var zone = ZoneWith(new SrvRecord
         {
-            Name   = "_sip._tcp.example.com.",
-            Type   = "SRV",
-            Ttl    = 600,
+            Name = "_sip._tcp.example.com.",
+            Type = "SRV",
+            Ttl = 600,
             Values = [new SrvValue(10, 20, 0, "sip.example.com.")]
         });
         ZoneValidator.Validate(zone).IsValid.ShouldBeTrue();
@@ -90,9 +90,9 @@ public class ZoneValidatorBoundaryTests
     {
         var zone = ZoneWith(new SrvRecord
         {
-            Name   = "_sip._tcp.example.com.",
-            Type   = "SRV",
-            Ttl    = 600,
+            Name = "_sip._tcp.example.com.",
+            Type = "SRV",
+            Ttl = 600,
             Values = [new SrvValue(10, 20, 65535, "sip.example.com.")]
         });
         ZoneValidator.Validate(zone).IsValid.ShouldBeTrue();
@@ -103,9 +103,9 @@ public class ZoneValidatorBoundaryTests
     {
         var zone = ZoneWith(new SrvRecord
         {
-            Name   = "_sip._tcp.example.com.",
-            Type   = "SRV",
-            Ttl    = 600,
+            Name = "_sip._tcp.example.com.",
+            Type = "SRV",
+            Ttl = 600,
             Values = [new SrvValue(10, 20, 65536, "sip.example.com.")]
         });
         var result = ZoneValidator.Validate(zone);
@@ -118,9 +118,9 @@ public class ZoneValidatorBoundaryTests
     {
         var zone = ZoneWith(new SrvRecord
         {
-            Name   = "_sip._tcp.example.com.",
-            Type   = "SRV",
-            Ttl    = 600,
+            Name = "_sip._tcp.example.com.",
+            Type = "SRV",
+            Ttl = 600,
             Values = [new SrvValue(10, 20, -1, "sip.example.com.")]
         });
         ZoneValidator.Validate(zone).IsValid.ShouldBeFalse();
@@ -131,9 +131,9 @@ public class ZoneValidatorBoundaryTests
     {
         var zone = ZoneWith(new SrvRecord
         {
-            Name   = "_sip._tcp.example.com.",
-            Type   = "SRV",
-            Ttl    = 600,
+            Name = "_sip._tcp.example.com.",
+            Type = "SRV",
+            Ttl = 600,
             Values = [new SrvValue(0, 0, 5060, "sip.example.com.")]
         });
         ZoneValidator.Validate(zone).IsValid.ShouldBeTrue();
@@ -146,9 +146,9 @@ public class ZoneValidatorBoundaryTests
     {
         var zone = ZoneWith(new MxRecord
         {
-            Name   = "example.com.",
-            Type   = "MX",
-            Ttl    = 3600,
+            Name = "example.com.",
+            Type = "MX",
+            Ttl = 3600,
             Values = [new MxValue(0, "mail.example.com.")]
         });
         ZoneValidator.Validate(zone).IsValid.ShouldBeTrue();
@@ -159,9 +159,9 @@ public class ZoneValidatorBoundaryTests
     {
         var zone = ZoneWith(new MxRecord
         {
-            Name   = "example.com.",
-            Type   = "MX",
-            Ttl    = 3600,
+            Name = "example.com.",
+            Type = "MX",
+            Ttl = 3600,
             Values = [new MxValue(65535, "mail.example.com.")]
         });
         ZoneValidator.Validate(zone).IsValid.ShouldBeTrue();
@@ -172,9 +172,9 @@ public class ZoneValidatorBoundaryTests
     {
         var zone = ZoneWith(new MxRecord
         {
-            Name   = "example.com.",
-            Type   = "MX",
-            Ttl    = 3600,
+            Name = "example.com.",
+            Type = "MX",
+            Ttl = 3600,
             Values = [new MxValue(-1, "mail.example.com.")]
         });
         ZoneValidator.Validate(zone).IsValid.ShouldBeFalse();
@@ -185,9 +185,9 @@ public class ZoneValidatorBoundaryTests
     {
         var zone = ZoneWith(new MxRecord
         {
-            Name   = "example.com.",
-            Type   = "MX",
-            Ttl    = 3600,
+            Name = "example.com.",
+            Type = "MX",
+            Ttl = 3600,
             Values = [new MxValue(65536, "mail.example.com.")]
         });
         ZoneValidator.Validate(zone).IsValid.ShouldBeFalse();
@@ -200,9 +200,9 @@ public class ZoneValidatorBoundaryTests
     {
         var zone = ZoneWith(new CaaRecord
         {
-            Name   = "example.com.",
-            Type   = "CAA",
-            Ttl    = 3600,
+            Name = "example.com.",
+            Type = "CAA",
+            Ttl = 3600,
             Values = [new CaaValue(0, "issue", "letsencrypt.org")]
         });
         ZoneValidator.Validate(zone).IsValid.ShouldBeTrue();
@@ -213,9 +213,9 @@ public class ZoneValidatorBoundaryTests
     {
         var zone = ZoneWith(new CaaRecord
         {
-            Name   = "example.com.",
-            Type   = "CAA",
-            Ttl    = 3600,
+            Name = "example.com.",
+            Type = "CAA",
+            Ttl = 3600,
             Values = [new CaaValue(128, "issue", "letsencrypt.org")]
         });
         ZoneValidator.Validate(zone).IsValid.ShouldBeTrue();
