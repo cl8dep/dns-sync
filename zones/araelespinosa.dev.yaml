@@ -1,0 +1,40 @@
+# Zone: araelespinosa.dev.
+# Imported by dns-sync on 2026-04-29
+
+'':
+  -
+    type: A
+    ttl: 600
+    value: 216.198.79.1
+  -
+    type: MX
+    ttl: 3600
+    values:
+      - preference: 10
+        exchange: mx01.mail.icloud.com.
+      - preference: 10
+        exchange: mx02.mail.icloud.com.
+  -
+    type: NS
+    ttl: 86400
+    values:
+      - curitiba.porkbun.com.
+      - fortaleza.porkbun.com.
+      - maceio.porkbun.com.
+      - salvador.porkbun.com.
+  -
+    type: TXT
+    ttl: 600
+    values:
+      - apple-domain=Y6ghd3wxkTr17fu3
+      - "v=spf1 include:icloud.com ~all"
+
+sig1._domainkey:
+  type: CNAME
+  ttl: 600
+  value: sig1.dkim.araelespinosa.dev.at.icloudmailadmin.com.
+
+www:
+  type: CNAME
+  ttl: 600
+  value: 3ea023a86b3524ed.vercel-dns-017.com.

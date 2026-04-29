@@ -1,0 +1,19 @@
+coverage:
+  status:
+    # Block PR merge if project coverage drops by more than 1%
+    project:
+      default:
+        target: auto        # compare against base commit
+        threshold: 1%       # allow up to 1% drop before failing
+    # Annotate PR with coverage change on the modified lines only
+    patch:
+      default:
+        target: 80%         # require at least 80% coverage on new/changed lines
+        threshold: 5%
+
+comment:
+  layout: "reach,diff,flags,files"
+  behavior: default         # post once, update on each push
+  require_changes: false    # comment even when coverage is unchanged
+  require_base: false       # comment even on first push (no base to compare)
+  hide_project_coverage: false

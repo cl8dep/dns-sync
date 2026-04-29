@@ -37,6 +37,18 @@ public class Route53Provider : IProvider
         ILogger<Route53Provider> logger,
         string? sessionToken = null,
         string? hostedZoneId = null)
+        : this(accessKeyId, secretAccessKey, region, logger,
+               new HttpClient { Timeout = TimeSpan.FromSeconds(30) }, sessionToken, hostedZoneId)
+    { }
+
+    internal Route53Provider(
+        string accessKeyId,
+        string secretAccessKey,
+        string region,
+        ILogger<Route53Provider> logger,
+        HttpClient http,
+        string? sessionToken = null,
+        string? hostedZoneId = null)
     {
         _accessKeyId = accessKeyId;
         _secretAccessKey = secretAccessKey;
@@ -44,7 +56,7 @@ public class Route53Provider : IProvider
         _region = region;
         _configuredZoneId = hostedZoneId;
         _logger = logger;
-        _http = new HttpClient { Timeout = TimeSpan.FromSeconds(30) };
+        _http = http;
     }
 
     public async Task PreflightAsync(CancellationToken ct = default)

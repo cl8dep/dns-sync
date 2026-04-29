@@ -29,10 +29,13 @@ public class CloudflareProvider : IProvider
     };
 
     public CloudflareProvider(string apiToken, ILogger<CloudflareProvider> logger, string? accountId = null)
+        : this(apiToken, logger, new HttpClient { Timeout = TimeSpan.FromSeconds(30) }, accountId) { }
+
+    internal CloudflareProvider(string apiToken, ILogger<CloudflareProvider> logger, HttpClient http, string? accountId = null)
     {
         _logger = logger;
         _accountId = accountId;
-        _http = new HttpClient { Timeout = TimeSpan.FromSeconds(30) };
+        _http = http;
         _http.DefaultRequestHeaders.Authorization =
             new AuthenticationHeaderValue("Bearer", apiToken);
         _http.DefaultRequestHeaders.Accept.Add(

@@ -29,9 +29,12 @@ public class GoDaddyProvider : IProvider
     };
 
     public GoDaddyProvider(string apiKey, string secretKey, ILogger<GoDaddyProvider> logger)
+        : this(apiKey, secretKey, logger, new HttpClient { Timeout = TimeSpan.FromSeconds(30) }) { }
+
+    internal GoDaddyProvider(string apiKey, string secretKey, ILogger<GoDaddyProvider> logger, HttpClient http)
     {
         _logger = logger;
-        _http = new HttpClient { Timeout = TimeSpan.FromSeconds(30) };
+        _http = http;
         _http.DefaultRequestHeaders.Authorization =
             new AuthenticationHeaderValue("sso-key", $"{apiKey}:{secretKey}");
         _http.DefaultRequestHeaders.Accept.Add(

@@ -31,13 +31,20 @@ jobs:
       - name: Test
         run: dotnet test --no-build -c Release --logger "console;verbosity=normal" --collect "XPlat Code Coverage" --results-directory ./coverage
 
-      - name: Upload coverage
+      - name: Upload coverage artifact
         uses: actions/upload-artifact@v4
         if: always()
         with:
           name: coverage-report
           path: ./coverage/**/coverage.cobertura.xml
           retention-days: 14
+
+      - name: Upload coverage to Codecov
+        uses: codecov/codecov-action@v5
+        with:
+          files: ./coverage/**/coverage.cobertura.xml
+          # fail_ci_if_error: false — Codecov outages should not block CI
+          fail_ci_if_error: false
 
       - name: Validate zone JSON Schema
         run: npx --yes ajv-cli@5 compile -s schemas/zone.schema.json

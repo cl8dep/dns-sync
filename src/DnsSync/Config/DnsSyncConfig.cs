@@ -77,6 +77,19 @@ public class ZoneConfig
     public List<string> Targets { get; set; } = new();
 }
 
+/// <summary>
+/// Defines a group of zones discovered automatically from a source provider.
+///
+/// At runtime, dns-sync calls GetZonesAsync() on the source provider and adds every
+/// discovered zone (after filtering) as if it were declared under zones: with the same
+/// source and targets. Explicit zones: entries always win — a zone already declared
+/// explicitly will not be overridden by a group.
+///
+/// Failure behaviour: if zone discovery fails (network error, auth error, etc.) the
+/// group is skipped with a warning and dns-sync continues with whatever zones were
+/// already resolved. This is intentional — a transient provider failure should not
+/// prevent syncing the zones that are already known.
+/// </summary>
 public class ZoneGroupConfig
 {
     [YamlMember(Alias = "source")]
