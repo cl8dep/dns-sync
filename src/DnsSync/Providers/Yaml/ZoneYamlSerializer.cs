@@ -10,6 +10,37 @@ namespace DnsSync.Providers.Yaml;
 /// </summary>
 public static class ZoneYamlSerializer
 {
+    private static readonly Dictionary<string, int> RecordTypeOrder = new(StringComparer.OrdinalIgnoreCase)
+    {
+        ["SOA"] = 0,
+        ["NS"] = 1,
+        ["A"] = 2,
+        ["AAAA"] = 3,
+        ["CNAME"] = 4,
+        ["MX"] = 5,
+        ["TXT"] = 6,
+        ["SRV"] = 7,
+        ["CAA"] = 8,
+    };
+
+    private static int GetTypeOrder(string type) =>
+        RecordTypeOrder.TryGetValue(type, out var order) ? order : 100;
+
+    /// <summary>
+    /// Returns a sorted copy of the record with MX values ordered by preference ascending.
+    /// Non-MX records are returned as-is.
+    /// </summary>
+    private static DnsRecord SortRecordValues(DnsRecord record)
+    {
+        if (record is MxRecord mx && mx.Values.Count > 1)
+        {
+            var sorted = mx.Values.OrderBy(v => v.Preference).ThenBy(v => v.Exchange, StringComparer.OrdinalIgnoreCase).ToList();
+            return new MxRecord { Name = mx.Name, Type = mx.Type, Ttl = mx.Ttl, Values = sorted };
+        }
+
+        return record;
+    }
+
     public static string Serialize(DnsZone zone, string? providerName = null)
     {
         var sb = new StringBuilder();
@@ -18,15 +49,20 @@ public static class ZoneYamlSerializer
         sb.AppendLine($"# Imported {fromClause}by dns-sync on {DateTime.UtcNow:yyyy-MM-dd}");
         sb.AppendLine();
 
-        // Group records by subdomain key for output
+        // Group records by subdomain key, apex first then alphabetical
         var bySubdomain = zone.Records
             .GroupBy(r => SubdomainKey(r.Name, zone.Name))
-            .OrderBy(g => g.Key == "" ? "\0" : g.Key); // apex first
+            .OrderBy(g => g.Key == "" ? "\0" : g.Key); // apex first, then alphabetical
 
         foreach (var group in bySubdomain)
         {
             var key = group.Key;
-            var records = group.ToList();
+            // Sort records within each subdomain: semantic type order, then alphabetical
+            var records = group
+                .Select(SortRecordValues)
+                .OrderBy(r => GetTypeOrder(r.Type))
+                .ThenBy(r => r.Type, StringComparer.OrdinalIgnoreCase)
+                .ToList();
             var yamlKey = key == "" ? "''" : key;
 
             if (records.Count == 1)

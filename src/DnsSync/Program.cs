@@ -154,6 +154,11 @@ app.Configure(config =>
         .WithExample(["diff", "--from", "cloudflare", "--to", "route53", "--config", "config.yaml"])
         .WithExample(["diff", "--from", "cloudflare", "--to", "porkbun", "--zone", "example.com.", "--config", "config.yaml"]);
 
+    config.AddCommand<FmtCommand>("fmt")
+        .WithDescription("Reformat zone YAML files to canonical sorted style")
+        .WithExample(["fmt"])
+        .WithExample(["fmt", "./zones", "--check"]);
+
     config.AddCommand<DriftCommand>("drift")
         .WithDescription("Detect DNS record drift from desired state without applying changes")
         .WithExample(["drift", "--config", "config.yaml"])
