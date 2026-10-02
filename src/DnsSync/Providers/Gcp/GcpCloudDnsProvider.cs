@@ -50,22 +50,50 @@ public class GcpCloudDnsProvider : IProvider, IDisposable
         string? credentialsFile,
         bool? privateZones,
         ILogger<GcpCloudDnsProvider> logger)
+        : this(project, credentialsFile, privateZones, logger,
+               new HttpClient { Timeout = TimeSpan.FromSeconds(30) }, Environment.GetEnvironmentVariable)
+    {
+    }
+
+    /// <summary>
+    /// Takes the HTTP client and the environment lookup so tests can drive credential
+    /// resolution without touching the process environment.
+    /// </summary>
+    internal GcpCloudDnsProvider(
+        string? project,
+        string? credentialsFile,
+        bool? privateZones,
+        ILogger<GcpCloudDnsProvider> logger,
+        HttpClient http,
+        Func<string, string?> getEnv)
     {
         _logger = logger;
         _privateZones = privateZones;
-        _http = new HttpClient { Timeout = TimeSpan.FromSeconds(30) };
+        _http = http;
 
-        // ADC credential resolution order (mirrors the official ADC chain):
+        // Credential resolution order:
+        //   0. GOOGLE_OAUTH_ACCESS_TOKEN env var: a ready OAuth2 access token, e.g. from
+        //      google-github-actions/auth with token_format: access_token (Workload Identity
+        //      Federation). Used as is and never refreshed, so it must outlive the run.
+        //   Then the ADC chain:
         //   1. explicit credentials_file config option
         //   2. GOOGLE_APPLICATION_CREDENTIALS env var
         //   3. Well-known gcloud ADC file (~/.config/gcloud/application_default_credentials.json)
         //   4. GCE/Cloud Run metadata server
-        var resolvedCreds = credentialsFile is not null
-            ? Path.GetFullPath(Environment.ExpandEnvironmentVariables(credentialsFile))
-            : Environment.GetEnvironmentVariable("GOOGLE_APPLICATION_CREDENTIALS")
-              ?? GetWellKnownAdcPath();
+        var accessToken = getEnv("GOOGLE_OAUTH_ACCESS_TOKEN");
+        var resolvedCreds = !string.IsNullOrEmpty(accessToken)
+            ? null
+            : credentialsFile is not null
+                ? Path.GetFullPath(Environment.ExpandEnvironmentVariables(credentialsFile))
+                : getEnv("GOOGLE_APPLICATION_CREDENTIALS") ?? GetWellKnownAdcPath();
 
-        if (resolvedCreds is not null && File.Exists(resolvedCreds))
+        if (!string.IsNullOrEmpty(accessToken))
+        {
+            _accessToken = accessToken;
+            _tokenExpiry = DateTimeOffset.MaxValue;
+            _logger.LogDebug("Using the access token from GOOGLE_OAUTH_ACCESS_TOKEN");
+        }
+        else if (resolvedCreds is not null && File.Exists(resolvedCreds))
         {
             var doc = JsonDocument.Parse(File.ReadAllText(resolvedCreds));
             var root = doc.RootElement;
@@ -108,9 +136,9 @@ public class GcpCloudDnsProvider : IProvider, IDisposable
 
         // Fall back to well-known project env vars
         if (string.IsNullOrEmpty(project))
-            project = Environment.GetEnvironmentVariable("GOOGLE_CLOUD_PROJECT")
-                   ?? Environment.GetEnvironmentVariable("GCLOUD_PROJECT")
-                   ?? Environment.GetEnvironmentVariable("CLOUDSDK_CORE_PROJECT");
+            project = getEnv("GOOGLE_CLOUD_PROJECT")
+                   ?? getEnv("GCLOUD_PROJECT")
+                   ?? getEnv("CLOUDSDK_CORE_PROJECT");
 
         if (string.IsNullOrEmpty(project))
             throw new InvalidOperationException(
