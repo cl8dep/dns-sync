@@ -94,7 +94,9 @@ public class DriftCommand(ILoggerFactory loggerFactory, IZoneResolver zoneResolv
                             targetZone = await targetProvider.GetZoneAsync(zoneName, cancellationToken);
                         }
 
-                        var plan = ZoneDiff.Diff(sourceZone, targetZone, settings.IncludeApexNs);
+                        var plan = ZoneDiff.Diff(
+                            CommandHelpers.SourceForTarget(sourceZone, targetName, config.Providers[targetName], quiet: jsonMode || silent),
+                            targetZone, settings.IncludeApexNs);
 
                         var changes = settings.IgnoreTtl
                             ? plan.Changes.Where(c => !c.IsTtlOnlyChange).ToList()

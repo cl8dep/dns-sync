@@ -13,7 +13,16 @@ public abstract class DnsRecord
     /// Cloudflare proxy status. Null means unmanaged: the flag is neither compared nor written.
     /// Only A, AAAA and CNAME records can be proxied; providers other than Cloudflare ignore it.
     /// </summary>
-    public bool? Proxied { get; init; }
+    public bool? Proxied { get => _proxied; init => _proxied = value; }
+    private bool? _proxied;
+
+    /// <summary>Copy of this record with the proxy status unmanaged.</summary>
+    public DnsRecord WithoutProxied()
+    {
+        var copy = (DnsRecord)MemberwiseClone();
+        copy._proxied = null;
+        return copy;
+    }
 
     /// <summary>True when both records declare a proxy status and they disagree.</summary>
     public static bool ProxiedDiffers(DnsRecord a, DnsRecord b) =>

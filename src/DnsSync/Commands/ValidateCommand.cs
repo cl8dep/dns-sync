@@ -30,6 +30,11 @@ public class ValidateCommand(IZoneResolver zoneResolver) : AsyncCommand<BaseSett
                     await provider.PreflightAsync(cancellationToken);
                     var zone = await provider.GetZoneAsync(zoneName, cancellationToken);
                     var result = ZoneValidator.Validate(zone);
+                    foreach (var targetName in zoneConfig.Targets)
+                    {
+                        if (CommandHelpers.ProxiedWarning(zone, targetName, config.Providers[targetName]) is { } warning)
+                            result.AddWarning(warning);
+                    }
 
                     if (result.Errors.Count > 0 || result.Warnings.Count > 0)
                     {
