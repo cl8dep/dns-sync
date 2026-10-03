@@ -33,6 +33,24 @@ public class ZoneYamlSerializerTests
         record.Addresses.ShouldBe(["1.2.3.4", "5.6.7.8"]);
     }
 
+    [Theory]
+    [InlineData(true)]
+    [InlineData(false)]
+    [InlineData(null)]
+    public void Serialize_Proxied_RoundTrips(bool? proxied)
+    {
+        var zone = MakeZone(
+            new ARecord { Name = "www.example.com.", Type = "A", Ttl = 300, Proxied = proxied, Addresses = ["1.2.3.4", "5.6.7.8"] },
+            new CnameRecord { Name = "api.example.com.", Type = "CNAME", Ttl = 300, Proxied = proxied, Target = "origin.example.net." });
+
+        var yaml = ZoneYamlSerializer.Serialize(zone);
+        var parsed = YamlProvider.ParseZoneYaml(yaml, "example.com.");
+
+        yaml.Contains("proxied:").ShouldBe(proxied is not null);
+        parsed.OfType<ARecord>().Single().Proxied.ShouldBe(proxied);
+        parsed.OfType<CnameRecord>().Single().Proxied.ShouldBe(proxied);
+    }
+
     [Fact]
     public void Serialize_ApexRecord_UsesEmptyKey()
     {

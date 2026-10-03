@@ -8,5 +8,5 @@ public class ARecord : DnsRecord
         string.Join(",", Addresses.OrderBy(x => x));
 
     public override string FormatValues() =>
-        string.Join(", ", Addresses.OrderBy(x => x));
+        string.Join(", ", Addresses.OrderBy(x => x)) + ProxiedSuffix;
 }

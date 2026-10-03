@@ -42,5 +42,6 @@ public class SavedChange
 public class SavedRecord
 {
     public int Ttl { get; set; }
+    public bool? Proxied { get; set; }
     public List<string> Values { get; set; } = [];
 }

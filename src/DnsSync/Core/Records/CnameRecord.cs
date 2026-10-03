@@ -6,5 +6,5 @@ public class CnameRecord : DnsRecord
 
     public override string CanonicalHash() => NormalizeFqdn(Target);
 
-    public override string FormatValues() => NormalizeFqdn(Target);
+    public override string FormatValues() => NormalizeFqdn(Target) + ProxiedSuffix;
 }

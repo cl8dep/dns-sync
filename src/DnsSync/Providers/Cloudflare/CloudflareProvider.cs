@@ -258,6 +258,7 @@ public class CloudflareProvider : IProvider
                     Name = first.Name,
                     Type = first.Type,
                     Ttl = first.Ttl,
+                    Proxied = first.Proxied,
                     Addresses = records.Cast<ARecord>().SelectMany(r => r.Addresses).ToList()
                 },
                 AaaaRecord => new AaaaRecord
@@ -265,6 +266,7 @@ public class CloudflareProvider : IProvider
                     Name = first.Name,
                     Type = first.Type,
                     Ttl = first.Ttl,
+                    Proxied = first.Proxied,
                     Addresses = records.Cast<AaaaRecord>().SelectMany(r => r.Addresses).ToList()
                 },
                 MxRecord => new MxRecord
@@ -358,6 +360,10 @@ public class CloudflareProvider : IProvider
         var ttl = r.TryGetProperty("ttl", out var ttlEl) ? ttlEl.GetInt32() : 3600;
         // Cloudflare uses TTL=1 to mean "automatic" (proxied records). Treat as 300.
         if (ttl == 1) ttl = 300;
+        bool? proxied = r.TryGetProperty("proxied", out var proxiedEl)
+            && proxiedEl.ValueKind is JsonValueKind.True or JsonValueKind.False
+            ? proxiedEl.GetBoolean()
+            : null;
 
         return type switch
         {
@@ -366,6 +372,7 @@ public class CloudflareProvider : IProvider
                 Name = name,
                 Type = "A",
                 Ttl = ttl,
+                Proxied = proxied,
                 Addresses = [r.GetProperty("content").GetString()!]
             },
             "AAAA" => new AaaaRecord
@@ -373,6 +380,7 @@ public class CloudflareProvider : IProvider
                 Name = name,
                 Type = "AAAA",
                 Ttl = ttl,
+                Proxied = proxied,
                 Addresses = [r.GetProperty("content").GetString()!]
             },
             "CNAME" => new CnameRecord
@@ -380,6 +388,7 @@ public class CloudflareProvider : IProvider
                 Name = name,
                 Type = "CNAME",
                 Ttl = ttl,
+                Proxied = proxied,
                 Target = DnsNameHelper.NormalizeFqdn(r.GetProperty("content").GetString()!)
             },
             "MX" => new MxRecord
@@ -507,14 +516,14 @@ public class CloudflareProvider : IProvider
 
         return record switch
         {
-            ARecord a => a.Addresses.Select(addr => new Dictionary<string, object>
-            { ["type"] = "A", ["name"] = name, ["content"] = addr, ["ttl"] = ttl }).ToList(),
+            ARecord a => a.Addresses.Select(addr => WithProxied(new Dictionary<string, object>
+            { ["type"] = "A", ["name"] = name, ["content"] = addr, ["ttl"] = ttl }, record)).ToList(),
 
-            AaaaRecord aaaa => aaaa.Addresses.Select(addr => new Dictionary<string, object>
-            { ["type"] = "AAAA", ["name"] = name, ["content"] = addr, ["ttl"] = ttl }).ToList(),
+            AaaaRecord aaaa => aaaa.Addresses.Select(addr => WithProxied(new Dictionary<string, object>
+            { ["type"] = "AAAA", ["name"] = name, ["content"] = addr, ["ttl"] = ttl }, record)).ToList(),
 
-            CnameRecord cname => [new Dictionary<string, object>
-                { ["type"] = "CNAME", ["name"] = name, ["content"] = cname.Target.TrimEnd('.'), ["ttl"] = ttl }],
+            CnameRecord cname => [WithProxied(new Dictionary<string, object>
+                { ["type"] = "CNAME", ["name"] = name, ["content"] = cname.Target.TrimEnd('.'), ["ttl"] = ttl }, record)],
 
             MxRecord mx => mx.Values.Select(v => new Dictionary<string, object>
             {
@@ -550,6 +559,17 @@ public class CloudflareProvider : IProvider
 
             _ => []
         };
+    }
+
+    private static Dictionary<string, object> WithProxied(Dictionary<string, object> payload, DnsRecord record)
+    {
+        if (record.Proxied is not { } proxied)
+            return payload;
+
+        payload["proxied"] = proxied;
+        // Cloudflare only accepts automatic TTL (1) on proxied records.
+        if (proxied) payload["ttl"] = 1;
+        return payload;
     }
 
     // --- HTTP helpers with retry ---

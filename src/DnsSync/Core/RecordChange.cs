@@ -16,5 +16,6 @@ public class RecordChange
         ChangeType == ChangeType.Update &&
         Before is not null && After is not null &&
         Before.CanonicalHash() == After.CanonicalHash() &&
+        !DnsRecord.ProxiedDiffers(Before, After) &&
         Before.Ttl != After.Ttl;
 }

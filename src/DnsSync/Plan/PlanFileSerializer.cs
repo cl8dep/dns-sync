@@ -134,6 +134,7 @@ public static class PlanFileSerializer
         new()
         {
             Ttl = record.Ttl,
+            Proxied = record.Proxied,
             Values = EncodeValues(record)
         };
 
@@ -156,8 +157,8 @@ public static class PlanFileSerializer
     private static DnsRecord ToRecord(string name, string type, SavedRecord saved) =>
         type.ToUpperInvariant() switch
         {
-            "A" => new ARecord { Name = name, Type = type, Ttl = saved.Ttl, Addresses = saved.Values },
-            "AAAA" => new AaaaRecord { Name = name, Type = type, Ttl = saved.Ttl, Addresses = saved.Values },
+            "A" => new ARecord { Name = name, Type = type, Ttl = saved.Ttl, Proxied = saved.Proxied, Addresses = saved.Values },
+            "AAAA" => new AaaaRecord { Name = name, Type = type, Ttl = saved.Ttl, Proxied = saved.Proxied, Addresses = saved.Values },
             "NS" => new NsRecord { Name = name, Type = type, Ttl = saved.Ttl, Nameservers = saved.Values },
             "TXT" => new TxtRecord { Name = name, Type = type, Ttl = saved.Ttl, Values = saved.Values },
             "CNAME" => new CnameRecord
@@ -165,6 +166,7 @@ public static class PlanFileSerializer
                 Name = name,
                 Type = type,
                 Ttl = saved.Ttl,
+                Proxied = saved.Proxied,
                 Target = saved.Values.FirstOrDefault() ?? string.Empty
             },
             "MX" => new MxRecord

@@ -57,6 +57,46 @@ public class DiffEngineTests
     }
 
     [Fact]
+    public void Diff_WhenProxiedChanges_ProducesUpdateNotMarkedAsTtlOnly()
+    {
+        var source = ZoneWith("example.com.",
+            new ARecord { Name = "www.example.com.", Type = "A", Ttl = 300, Proxied = true, Addresses = ["1.2.3.4"] });
+        var target = ZoneWith("example.com.",
+            new ARecord { Name = "www.example.com.", Type = "A", Ttl = 300, Proxied = false, Addresses = ["1.2.3.4"] });
+
+        var plan = ZoneDiff.Diff(source, target);
+
+        plan.Updates.ShouldBe(1);
+        plan.Changes[0].IsTtlOnlyChange.ShouldBeFalse();
+        plan.Changes[0].After!.FormatValues().ShouldBe("1.2.3.4 (proxied)");
+    }
+
+    [Theory]
+    [InlineData(null, true)]
+    [InlineData(null, false)]
+    [InlineData(true, null)]
+    public void Diff_WhenProxiedIsUnmanagedOnEitherSide_ProducesNoChange(bool? sourceProxied, bool? targetProxied)
+    {
+        var source = ZoneWith("example.com.",
+            new ARecord { Name = "www.example.com.", Type = "A", Ttl = 300, Proxied = sourceProxied, Addresses = ["1.2.3.4"] });
+        var target = ZoneWith("example.com.",
+            new ARecord { Name = "www.example.com.", Type = "A", Ttl = 300, Proxied = targetProxied, Addresses = ["1.2.3.4"] });
+
+        ZoneDiff.Diff(source, target).Changes.ShouldBeEmpty();
+    }
+
+    [Fact]
+    public void Diff_WhenBothProxied_IgnoresTtlDifference()
+    {
+        var source = ZoneWith("example.com.",
+            new ARecord { Name = "www.example.com.", Type = "A", Ttl = 3600, Proxied = true, Addresses = ["1.2.3.4"] });
+        var target = ZoneWith("example.com.",
+            new ARecord { Name = "www.example.com.", Type = "A", Ttl = 300, Proxied = true, Addresses = ["1.2.3.4"] });
+
+        ZoneDiff.Diff(source, target).Changes.ShouldBeEmpty();
+    }
+
+    [Fact]
     public void Diff_WhenOnlyTtlChanges_ProducesUpdateMarkedAsTtlOnly()
     {
         var source = ZoneWith("example.com.",

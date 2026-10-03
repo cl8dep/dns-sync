@@ -21,6 +21,10 @@
       "maximum": 2147483647,
       "description": "Time to live in seconds. Defaults to 3600 if omitted."
     },
+    "proxied": {
+      "type": "boolean",
+      "description": "Cloudflare proxy status. Omit to leave it unmanaged. Ignored by providers other than Cloudflare."
+    },
     "record": {
       "oneOf": [
         { "$ref": "#/definitions/ARecord" },
@@ -41,6 +45,7 @@
       "properties": {
         "type": { "type": "string", "const": "A" },
         "ttl": { "$ref": "#/definitions/ttl" },
+        "proxied": { "$ref": "#/definitions/proxied" },
         "values": {
           "oneOf": [
             {
@@ -73,6 +78,7 @@
       "properties": {
         "type": { "type": "string", "const": "AAAA" },
         "ttl": { "$ref": "#/definitions/ttl" },
+        "proxied": { "$ref": "#/definitions/proxied" },
         "values": {
           "oneOf": [
             {
@@ -105,6 +111,7 @@
       "properties": {
         "type": { "type": "string", "const": "CNAME" },
         "ttl": { "$ref": "#/definitions/ttl" },
+        "proxied": { "$ref": "#/definitions/proxied" },
         "value": {
           "type": "string",
           "description": "Target FQDN (e.g. 'api.backend.example.com.')."

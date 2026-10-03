@@ -8,5 +8,5 @@ public class AaaaRecord : DnsRecord
         string.Join(",", Addresses.Select(a => a.ToLowerInvariant()).OrderBy(x => x));
 
     public override string FormatValues() =>
-        string.Join(", ", Addresses.Select(a => a.ToLowerInvariant()).OrderBy(x => x));
+        string.Join(", ", Addresses.Select(a => a.ToLowerInvariant()).OrderBy(x => x)) + ProxiedSuffix;
 }

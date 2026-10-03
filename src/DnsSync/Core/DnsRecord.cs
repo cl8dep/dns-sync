@@ -9,6 +9,18 @@ public abstract class DnsRecord
     public required string Type { get; init; }   // e.g. "A", "MX", "CNAME"
     public required int Ttl { get; init; }
 
+    /// <summary>
+    /// Cloudflare proxy status. Null means unmanaged: the flag is neither compared nor written.
+    /// Only A, AAAA and CNAME records can be proxied; providers other than Cloudflare ignore it.
+    /// </summary>
+    public bool? Proxied { get; init; }
+
+    /// <summary>True when both records declare a proxy status and they disagree.</summary>
+    public static bool ProxiedDiffers(DnsRecord a, DnsRecord b) =>
+        a.Proxied is not null && b.Proxied is not null && a.Proxied != b.Proxied;
+
+    protected string ProxiedSuffix => Proxied == true ? " (proxied)" : "";
+
     /// <summary>Stable hash of the record's values for diff comparison. Excludes TTL.</summary>
     public abstract string CanonicalHash();
 

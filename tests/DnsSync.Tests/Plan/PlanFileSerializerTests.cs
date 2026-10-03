@@ -45,6 +45,30 @@ public class PlanFileSerializerTests
     // ── Round-trip ───────────────────────────────────────────────────────────
 
     [Fact]
+    public void SaveAndLoad_RoundTrip_PreservesProxied()
+    {
+        var (configPath, planPath) = WriteTempFiles();
+        var plan = new DnsPlan
+        {
+            Changes =
+            [
+                new RecordChange
+                {
+                    ChangeType = ChangeType.Update,
+                    Before = new CnameRecord { Name = "www.example.com.", Type = "CNAME", Ttl = 300, Proxied = false, Target = "origin.example.net." },
+                    After = new CnameRecord { Name = "www.example.com.", Type = "CNAME", Ttl = 300, Proxied = true, Target = "origin.example.net." }
+                }
+            ]
+        };
+
+        PlanFileSerializer.Save(configPath, [("example.com.", "cloudflare", plan)], planPath);
+        var loaded = PlanFileSerializer.ToDnsPlan(PlanFileSerializer.Load(configPath, planPath).Zones[0]);
+
+        loaded.Changes[0].Before!.Proxied.ShouldBe(false);
+        loaded.Changes[0].After!.Proxied.ShouldBe(true);
+    }
+
+    [Fact]
     public void SaveAndLoad_RoundTrip_PreservesZoneAndTarget()
     {
         var (configPath, planPath) = WriteTempFiles();

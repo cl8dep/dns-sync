@@ -15,6 +15,10 @@ public static class ZoneValidator
         new(StringComparer.OrdinalIgnoreCase)
         { "A", "AAAA", "CNAME", "MX", "TXT", "NS", "CAA", "SRV" };
 
+    private static readonly HashSet<string> ProxiableTypes =
+        new(StringComparer.OrdinalIgnoreCase)
+        { "A", "AAAA", "CNAME" };
+
     public static ValidationResult Validate(DnsZone zone)
     {
         var result = new ValidationResult();
@@ -43,6 +47,9 @@ public static class ZoneValidator
                 result.AddError($"{record.Name} {record.Type}: TTL exceeds max value");
             else if (record.Ttl < 60)
                 result.AddWarning($"{record.Name} {record.Type}: very low TTL ({record.Ttl}s) may cause excessive DNS traffic");
+
+            if (record.Proxied is not null && !ProxiableTypes.Contains(record.Type))
+                result.AddError($"{record.Name} {record.Type}: 'proxied' is only valid on A, AAAA and CNAME records");
 
             // Validate FQDN format
             if (!record.Name.EndsWith('.'))
