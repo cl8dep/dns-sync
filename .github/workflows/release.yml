@@ -1,16 +1,16 @@
 name: Release
 
-# Triggered by pushing a version tag: git tag v0.3.0 && git push origin v0.3.0
+# Triggered by publishing a GitHub release (UI or `gh release create v0.3.0 --generate-notes`).
+# The release and its tag already exist at that point; this workflow builds and attaches the binaries.
 on:
-  push:
-    tags:
-      - 'v[0-9]*'
+  release:
+    types: [published]
 
 jobs:
   release:
     runs-on: ubuntu-latest
     permissions:
-      contents: write   # needed to create GitHub releases
+      contents: write   # needed to upload release assets and move floating tags
     env:
       HOMEBREW_TAP_TOKEN: ${{ secrets.HOMEBREW_TAP_TOKEN }}
 
@@ -35,16 +35,15 @@ jobs:
           cp out/osx-x64/dns-sync  out/dns-sync-darwin-x64
           cp out/linux-x64/dns-sync out/dns-sync-linux-x64
 
-      - name: Create GitHub Release
+      - name: Upload release binaries
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          gh release create "${{ github.ref_name }}" \
+          gh release upload "${{ github.ref_name }}" \
             out/dns-sync-darwin-arm64 \
             out/dns-sync-darwin-x64 \
             out/dns-sync-linux-x64 \
-            --title "${{ github.ref_name }}" \
-            --generate-notes
+            --clobber
 
       - name: Update floating tags
         env:
