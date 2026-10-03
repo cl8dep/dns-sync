@@ -52,6 +52,50 @@ public class ZoneYamlSerializerTests
     }
 
     [Fact]
+    public void ParseZoneYaml_MergedRRsets_KeepProxiedFlag()
+    {
+        const string yaml = """
+            '':
+              - type: A
+                ttl: 300
+                proxied: true
+                value: 1.2.3.4
+              - type: A
+                ttl: 300
+                proxied: true
+                value: 5.6.7.8
+              - type: AAAA
+                ttl: 300
+                proxied: true
+                value: 2001:db8::1
+              - type: AAAA
+                ttl: 300
+                proxied: true
+                value: 2001:db8::2
+            """;
+
+        var parsed = YamlProvider.ParseZoneYaml(yaml, "example.com.");
+
+        var a = parsed.OfType<ARecord>().Single();
+        a.Addresses.Count.ShouldBe(2);
+        a.Proxied.ShouldBe(true);
+        var aaaa = parsed.OfType<AaaaRecord>().Single();
+        aaaa.Addresses.Count.ShouldBe(2);
+        aaaa.Proxied.ShouldBe(true);
+    }
+
+    [Fact]
+    public void FormatValues_ProxiedRecords_AppendSuffix()
+    {
+        new AaaaRecord { Name = "example.com.", Type = "AAAA", Ttl = 300, Proxied = true, Addresses = ["2001:DB8::1"] }
+            .FormatValues().ShouldBe("2001:db8::1 (proxied)");
+        new CnameRecord { Name = "www.example.com.", Type = "CNAME", Ttl = 300, Proxied = true, Target = "example.com." }
+            .FormatValues().ShouldBe("example.com. (proxied)");
+        new CnameRecord { Name = "www.example.com.", Type = "CNAME", Ttl = 300, Proxied = false, Target = "example.com." }
+            .FormatValues().ShouldBe("example.com.");
+    }
+
+    [Fact]
     public void Serialize_ApexRecord_UsesEmptyKey()
     {
         var zone = MakeZone(new ARecord

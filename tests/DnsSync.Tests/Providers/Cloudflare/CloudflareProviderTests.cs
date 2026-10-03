@@ -398,6 +398,67 @@ public class CloudflareProviderTests
         body.GetProperty("ttl").GetInt32().ShouldBe(300);
     }
 
+    [Fact]
+    public async Task GetZoneAsync_MergedRRsets_KeepProxiedFlag()
+    {
+        var handler = new FakeHttpHandler();
+        handler.Enqueue(ZoneIdResponse(ZoneId));
+        handler.Enqueue(RecordsPage([
+            """{"id":"1","type":"A","name":"example.com","content":"1.2.3.4","ttl":1,"proxied":true}""",
+            """{"id":"2","type":"A","name":"example.com","content":"5.6.7.8","ttl":1,"proxied":true}""",
+            """{"id":"3","type":"AAAA","name":"example.com","content":"2001:db8::1","ttl":1,"proxied":true}""",
+            """{"id":"4","type":"AAAA","name":"example.com","content":"2001:db8::2","ttl":1,"proxied":true}""",
+            """{"id":"5","type":"A","name":"legacy.example.com","content":"9.9.9.9","ttl":300}"""
+        ], totalPages: 1));
+
+        var zone = await Make(handler).GetZoneAsync(ZoneName);
+
+        var a = zone.Records.OfType<ARecord>().Single(r => r.Name == "example.com.");
+        a.Addresses.Count.ShouldBe(2);
+        a.Proxied.ShouldBe(true);
+        var aaaa = zone.Records.OfType<AaaaRecord>().ShouldHaveSingleItem();
+        aaaa.Addresses.Count.ShouldBe(2);
+        aaaa.Proxied.ShouldBe(true);
+        zone.Records.OfType<ARecord>().Single(r => r.Name == "legacy.example.com.").Proxied.ShouldBeNull();
+    }
+
+    [Fact]
+    public async Task ApplyPlanAsync_CreateAaaaAndCname_SendProxiedState()
+    {
+        var handler = new FakeHttpHandler();
+        handler.Enqueue(ZoneIdResponse(ZoneId));
+        handler.Enqueue(ExistingRecordsMap([]));
+        handler.Enqueue("""{"success":true,"result":{"id":"new-1"}}""");
+        handler.Enqueue("""{"success":true,"result":{"id":"new-2"}}""");
+
+        var plan = new DnsPlan
+        {
+            Changes =
+            [
+                new RecordChange
+                {
+                    ChangeType = ChangeType.Create,
+                    After = new AaaaRecord { Name = "example.com.", Type = "AAAA", Ttl = 300, Proxied = true, Addresses = ["2001:db8::1"] }
+                },
+                new RecordChange
+                {
+                    ChangeType = ChangeType.Create,
+                    After = new CnameRecord { Name = "api.example.com.", Type = "CNAME", Ttl = 600, Proxied = false, Target = "origin.example.net." }
+                }
+            ]
+        };
+
+        var result = await Make(handler).ApplyPlanAsync(ZoneName, plan);
+
+        result.Applied.ShouldBe(2);
+        var aaaa = System.Text.Json.JsonDocument.Parse(await handler.Requests[^2].Content!.ReadAsStringAsync()).RootElement;
+        aaaa.GetProperty("proxied").GetBoolean().ShouldBeTrue();
+        aaaa.GetProperty("ttl").GetInt32().ShouldBe(1);
+        var cname = System.Text.Json.JsonDocument.Parse(await handler.Requests[^1].Content!.ReadAsStringAsync()).RootElement;
+        cname.GetProperty("proxied").GetBoolean().ShouldBeFalse();
+        cname.GetProperty("ttl").GetInt32().ShouldBe(600);
+    }
+
     // ── Response helpers ──────────────────────────────────────────────────────
 
     private static string ZonesPage(IEnumerable<string> names, int totalPages)

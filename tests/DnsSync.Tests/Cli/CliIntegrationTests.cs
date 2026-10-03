@@ -85,6 +85,79 @@ public class CliIntegrationTests : IDisposable
     private Task<int> RunWithResolver(IZoneResolver resolver, params string[] args)
         => BuildApp(resolver).RunAsync(args);
 
+    // ── Validate: proxied on targets that cannot proxy ───────────────────────
+
+    private (string ConfigPath, StubZoneResolver Resolver) BuildProxiedValidateSetup(string targetType, string proxied)
+    {
+        var zones = Path.Combine(_tmp, "zones");
+        Directory.CreateDirectory(zones);
+        File.WriteAllText(Path.Combine(zones, "example.com.yaml"), $"""
+            www:
+              type: A
+              ttl: 300
+              proxied: {proxied}
+              value: 1.2.3.4
+            """);
+
+        var configPath = Path.Combine(_tmp, "proxied-config.yaml");
+        File.WriteAllText(configPath, $"""
+            providers:
+              source:
+                type: yaml
+                directory: {zones}
+              target:
+                type: {targetType}
+                directory: {zones}
+                api_token: fake
+            zones:
+              example.com.:
+                source: source
+                targets: [target]
+            """);
+
+        var resolver = new StubZoneResolver(new Dictionary<string, ZoneConfig>(StringComparer.OrdinalIgnoreCase)
+        {
+            ["example.com."] = new ZoneConfig { Source = "source", Targets = ["target"] }
+        });
+        return (configPath, resolver);
+    }
+
+    private string FlatOutput => System.Text.RegularExpressions.Regex.Replace(_console.Output, @"\s+", " ");
+
+    [Fact]
+    public async Task Validate_ProxiedRecord_NonCloudflareTarget_WarnsButPasses()
+    {
+        var (config, resolver) = BuildProxiedValidateSetup("yaml", "true");
+
+        var exit = await RunWithResolver(resolver, "validate", "--config", config);
+
+        exit.ShouldBe(0);
+        FlatOutput.ShouldContain("only Cloudflare supports");
+    }
+
+    [Fact]
+    public async Task Validate_ProxiedRecord_NonCloudflareTarget_Strict_ReturnsExitOne()
+    {
+        var (config, resolver) = BuildProxiedValidateSetup("yaml", "true");
+
+        var exit = await RunWithResolver(resolver, "validate", "--config", config, "--strict");
+
+        exit.ShouldBe(1);
+    }
+
+    [Theory]
+    [InlineData("cloudflare", "true")]
+    [InlineData("yaml", "false")]
+    public async Task Validate_ProxiedRecord_NoWarningWhenSupportedOrDisabled(string targetType, string proxied)
+    {
+        var (config, resolver) = BuildProxiedValidateSetup(targetType, proxied);
+
+        var exit = await RunWithResolver(resolver, "validate", "--config", config, "--strict");
+
+        exit.ShouldBe(0);
+        FlatOutput.ShouldNotContain("only Cloudflare supports");
+    }
+
     // ── Unknown / misspelled commands ─────────────────────────────────────────
 
     [Fact]
