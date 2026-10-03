@@ -95,6 +95,19 @@ public class ZoneYamlSerializerTests
             .FormatValues().ShouldBe("example.com.");
     }
 
+    [Theory]
+    [InlineData("*.example.com.")]
+    [InlineData("*.dev.example.com.")]
+    public void Serialize_WildcardRecord_RoundTrips(string name)
+    {
+        var zone = MakeZone(new CnameRecord { Name = name, Type = "CNAME", Ttl = 300, Target = "origin.example.net." });
+
+        var yaml = ZoneYamlSerializer.Serialize(zone);
+        var parsed = YamlProvider.ParseZoneYaml(yaml, "example.com.");
+
+        parsed.OfType<CnameRecord>().Single().Name.ShouldBe(name);
+    }
+
     [Fact]
     public void Serialize_ApexRecord_UsesEmptyKey()
     {
