@@ -163,9 +163,64 @@ public class PlanCommandTests : IDisposable
 
     // ── Helpers ───────────────────────────────────────────────────────────────
 
+    // ── Proxied ───────────────────────────────────────────────────────────────
+
+    private static readonly DnsRecord[] ProxiedSource =
+        [new ARecord { Name = "www.example.com.", Type = "A", Ttl = 300, Proxied = true, Addresses = ["1.2.3.4"] }];
+
+    private string FlatOutput => System.Text.RegularExpressions.Regex.Replace(_console.Output, @"\s+", " ");
+
+    [Fact]
+    public async Task Plan_ProxiedRecord_NonCloudflareTarget_WarnsAndPlansDnsOnly()
+    {
+        var (config, factory, resolver) = BuildYamlToYamlSetup(ProxiedSource, []);
+
+        var exit = await BuildApp(factory, resolver).RunAsync(["plan", "--config", config]);
+
+        exit.ShouldBe(0);
+        FlatOutput.ShouldContain("1 record(s) have 'proxied: true', which only Cloudflare supports");
+        FlatOutput.ShouldNotContain("(proxied)");
+    }
+
+    [Fact]
+    public async Task Plan_ProxiedRecord_NonCloudflareTarget_InSyncWhenValuesMatch()
+    {
+        var (config, factory, resolver) = BuildYamlToYamlSetup(
+            ProxiedSource,
+            [new ARecord { Name = "www.example.com.", Type = "A", Ttl = 300, Addresses = ["1.2.3.4"] }]);
+
+        await BuildApp(factory, resolver).RunAsync(["plan", "--config", config]);
+
+        FlatOutput.ShouldContain("only Cloudflare supports");
+        FlatOutput.ShouldContain("in sync");
+    }
+
+    [Fact]
+    public async Task Plan_ProxiedRecord_CloudflareTarget_PlansProxiedWithoutWarning()
+    {
+        var (config, factory, resolver) = BuildYamlToYamlSetup(ProxiedSource, [], targetType: "cloudflare");
+
+        await BuildApp(factory, resolver).RunAsync(["plan", "--config", config]);
+
+        FlatOutput.ShouldNotContain("only Cloudflare supports");
+        FlatOutput.ShouldContain("(proxied)");
+    }
+
+    [Fact]
+    public async Task Plan_ProxiedFalse_NonCloudflareTarget_DoesNotWarn()
+    {
+        var (config, factory, resolver) = BuildYamlToYamlSetup(
+            [new ARecord { Name = "www.example.com.", Type = "A", Ttl = 300, Proxied = false, Addresses = ["1.2.3.4"] }], []);
+
+        await BuildApp(factory, resolver).RunAsync(["plan", "--config", config]);
+
+        FlatOutput.ShouldNotContain("only Cloudflare supports");
+    }
+
     private (string ConfigPath, StubProviderFactory Factory, StubZoneResolver Resolver) BuildYamlToYamlSetup(
         IEnumerable<DnsRecord> sourceRecords,
-        IEnumerable<DnsRecord> targetRecords)
+        IEnumerable<DnsRecord> targetRecords,
+        string targetType = "yaml")
     {
         const string ZoneName = "example.com.";
         const string SourceProvider = "source";
@@ -178,8 +233,9 @@ public class PlanCommandTests : IDisposable
                 type: yaml
                 directory: /tmp
               {TargetProvider}:
-                type: yaml
+                type: {targetType}
                 directory: /tmp
+                api_token: fake
             zones:
               {ZoneName}:
                 source: {SourceProvider}

@@ -61,9 +61,11 @@ public static class ZoneDiff
             var tgt = tgtList.First();
 
             var valuesChanged = src.CanonicalHash() != tgt.CanonicalHash();
-            var ttlChanged = src.Ttl != tgt.Ttl;
+            var proxiedChanged = DnsRecord.ProxiedDiffers(src, tgt);
+            // Cloudflare forces automatic TTL on proxied records, so the configured TTL never applies.
+            var ttlChanged = src.Ttl != tgt.Ttl && !(src.Proxied == true && tgt.Proxied == true);
 
-            if (valuesChanged || ttlChanged)
+            if (valuesChanged || ttlChanged || proxiedChanged)
                 changes.Add(new RecordChange
                 {
                     ChangeType = ChangeType.Update,

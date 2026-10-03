@@ -60,6 +60,43 @@ public static class CommandHelpers
         }
     }
 
+    private static bool SupportsProxied(ProviderConfig provider) =>
+        string.Equals(provider.Type, "cloudflare", StringComparison.OrdinalIgnoreCase);
+
+    /// <summary>
+    /// Warning for a zone that sets <c>proxied: true</c> but syncs to a target that cannot proxy, or null.
+    /// </summary>
+    public static string? ProxiedWarning(DnsZone source, string targetName, ProviderConfig target)
+    {
+        if (SupportsProxied(target))
+            return null;
+
+        var count = source.Records.Count(r => r.Proxied == true);
+        return count == 0
+            ? null
+            : $"{source.Name} → {targetName}: {count} record(s) have 'proxied: true', which only Cloudflare supports. " +
+              "They will be synced as DNS-only.";
+    }
+
+    /// <summary>
+    /// Returns the source zone as the target can represent it: the proxy status is dropped
+    /// for targets other than Cloudflare, with a warning when records asked to be proxied.
+    /// </summary>
+    public static DnsZone SourceForTarget(DnsZone source, string targetName, ProviderConfig target, bool quiet = false)
+    {
+        if (SupportsProxied(target))
+            return source;
+
+        if (!quiet && ProxiedWarning(source, targetName, target) is { } warning)
+            AnsiConsole.MarkupLine($"[yellow]⚠[/] {Markup.Escape(warning)}");
+
+        return new DnsZone
+        {
+            Name = source.Name,
+            Records = source.Records.Select(r => r.Proxied is null ? r : r.WithoutProxied()).ToList()
+        };
+    }
+
     public static void PrintPlan(DnsPlan plan, string zoneName, string targetName, bool wide = false, string output = "color")
     {
         if (string.Equals(output, "diff", StringComparison.OrdinalIgnoreCase))

@@ -90,6 +90,8 @@ public static class ZoneYamlSerializer
     {
         sb.AppendLine($"{indent}type: {record.Type}");
         sb.AppendLine($"{indent}ttl: {record.Ttl}");
+        if (record.Proxied is { } proxied)
+            sb.AppendLine($"{indent}proxied: {(proxied ? "true" : "false")}");
 
         switch (record)
         {

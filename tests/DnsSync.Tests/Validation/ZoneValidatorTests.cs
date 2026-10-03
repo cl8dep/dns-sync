@@ -28,6 +28,21 @@ public class ZoneValidatorTests
     }
 
     [Fact]
+    public void Validate_ProxiedOnNonProxiableType_ReturnsError()
+    {
+        var zone = new DnsZone
+        {
+            Name = "example.com.",
+            Records = [new TxtRecord { Name = "example.com.", Type = "TXT", Ttl = 300, Proxied = true, Values = ["hello"] }]
+        };
+
+        var result = ZoneValidator.Validate(zone);
+
+        result.IsValid.ShouldBeFalse();
+        result.Errors.ShouldContain(e => e.Contains("proxied"));
+    }
+
+    [Fact]
     public void Validate_NegativeTtl_ReturnsError()
     {
         var zone = ZoneWith(new ARecord

@@ -93,7 +93,9 @@ public class ApplyCommand(ILoggerFactory loggerFactory, IZoneResolver zoneResolv
                         else
                             targetZone = await targetProvider.GetZoneAsync(zoneName, cancellationToken);
 
-                        var plan = ZoneDiff.Diff(sourceZone, targetZone, settings.IncludeApexNs);
+                        var plan = ZoneDiff.Diff(
+                            CommandHelpers.SourceForTarget(sourceZone, targetName, config.Providers[targetName]),
+                            targetZone, settings.IncludeApexNs);
 
                         plans.Add((zoneName, targetName, plan, targetProvider));
                     }

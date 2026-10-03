@@ -108,6 +108,7 @@ public class YamlProvider(string directory) : IProvider
                     Name = first.Name,
                     Type = first.Type,
                     Ttl = first.Ttl,
+                    Proxied = first.Proxied,
                     Addresses = records.Cast<ARecord>().SelectMany(r => r.Addresses).ToList()
                 },
                 AaaaRecord => new AaaaRecord
@@ -115,6 +116,7 @@ public class YamlProvider(string directory) : IProvider
                     Name = first.Name,
                     Type = first.Type,
                     Ttl = first.Ttl,
+                    Proxied = first.Proxied,
                     Addresses = records.Cast<AaaaRecord>().SelectMany(r => r.Addresses).ToList()
                 },
                 MxRecord => new MxRecord
@@ -197,6 +199,7 @@ public class YamlProvider(string directory) : IProvider
         if (type is null) return null;
 
         var ttl = GetInt(def, "ttl") ?? 3600;
+        var proxied = GetBool(def, "proxied");
 
         return type switch
         {
@@ -205,6 +208,7 @@ public class YamlProvider(string directory) : IProvider
                 Name = fqdn,
                 Type = "A",
                 Ttl = ttl,
+                Proxied = proxied,
                 Addresses = GetStringList(def, "values", "value")
             },
             "AAAA" => new AaaaRecord
@@ -212,6 +216,7 @@ public class YamlProvider(string directory) : IProvider
                 Name = fqdn,
                 Type = "AAAA",
                 Ttl = ttl,
+                Proxied = proxied,
                 Addresses = GetStringList(def, "values", "value")
             },
             "CNAME" => new CnameRecord
@@ -219,6 +224,7 @@ public class YamlProvider(string directory) : IProvider
                 Name = fqdn,
                 Type = "CNAME",
                 Ttl = ttl,
+                Proxied = proxied,
                 Target = NormalizeFqdn(GetString(def, "value") ?? GetString(def, "target") ?? "")
             },
             "MX" => new MxRecord
@@ -226,6 +232,7 @@ public class YamlProvider(string directory) : IProvider
                 Name = fqdn,
                 Type = "MX",
                 Ttl = ttl,
+                Proxied = proxied,
                 Values = GetMxValues(def)
             },
             "TXT" => new TxtRecord
@@ -233,6 +240,7 @@ public class YamlProvider(string directory) : IProvider
                 Name = fqdn,
                 Type = "TXT",
                 Ttl = ttl,
+                Proxied = proxied,
                 Values = GetStringList(def, "values", "value").Select(UnescapeTxt).ToList()
             },
             "NS" => new NsRecord
@@ -240,6 +248,7 @@ public class YamlProvider(string directory) : IProvider
                 Name = fqdn,
                 Type = "NS",
                 Ttl = ttl,
+                Proxied = proxied,
                 Nameservers = GetStringList(def, "values", "value").Select(NormalizeFqdn).ToList()
             },
             "CAA" => new CaaRecord
@@ -247,6 +256,7 @@ public class YamlProvider(string directory) : IProvider
                 Name = fqdn,
                 Type = "CAA",
                 Ttl = ttl,
+                Proxied = proxied,
                 Values = GetCaaValues(def)
             },
             "SRV" => new SrvRecord
@@ -254,6 +264,7 @@ public class YamlProvider(string directory) : IProvider
                 Name = fqdn,
                 Type = "SRV",
                 Ttl = ttl,
+                Proxied = proxied,
                 Values = GetSrvValues(def)
             },
             _ => null  // unknown type, skip
@@ -265,6 +276,9 @@ public class YamlProvider(string directory) : IProvider
 
     private static int? GetInt(Dictionary<object, object> def, string key) =>
         def.TryGetValue(key, out var v) && v is not null && int.TryParse(v.ToString(), out var i) ? i : null;
+
+    private static bool? GetBool(Dictionary<object, object> def, string key) =>
+        def.TryGetValue(key, out var v) && v is not null && bool.TryParse(v.ToString(), out var b) ? b : null;
 
     private static IReadOnlyList<string> GetStringList(
         Dictionary<object, object> def, string listKey, string singleKey)
