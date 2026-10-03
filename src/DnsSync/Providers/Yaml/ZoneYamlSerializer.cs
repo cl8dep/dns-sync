@@ -63,7 +63,7 @@ public static class ZoneYamlSerializer
                 .OrderBy(r => GetTypeOrder(r.Type))
                 .ThenBy(r => r.Type, StringComparer.OrdinalIgnoreCase)
                 .ToList();
-            var yamlKey = key == "" ? "''" : key;
+            var yamlKey = QuoteKey(key);
 
             if (records.Count == 1)
             {
@@ -85,6 +85,10 @@ public static class ZoneYamlSerializer
 
         return sb.ToString().TrimEnd() + "\n";
     }
+
+    // Keys such as the wildcard "*" start with a YAML indicator character and must be quoted.
+    private static string QuoteKey(string key) =>
+        key.Length > 0 && (char.IsAsciiLetterOrDigit(key[0]) || key[0] == '_') ? key : $"'{key}'";
 
     private static void AppendRecord(StringBuilder sb, DnsRecord record, string indent)
     {

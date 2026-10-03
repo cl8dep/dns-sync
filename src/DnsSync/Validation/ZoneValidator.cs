@@ -141,10 +141,19 @@ public static class ZoneValidator
         // CNAME conflict check: CNAME cannot coexist with other record types at the same name
         foreach (var (name, types) in namesSeen)
         {
-            if (types.Contains("CNAME") && types.Count > 1)
+            if (!types.Contains("CNAME") || types.Count == 1)
+                continue;
+
+            var others = string.Join(", ", types.Where(t => t != "CNAME"));
+
+            // Providers with CNAME flattening (Cloudflare) serve an apex CNAME next to MX/TXT records.
+            if (string.Equals(name, zone.Name, StringComparison.OrdinalIgnoreCase))
+                result.AddWarning(
+                    $"{name}: apex CNAME alongside other record types ({others}) " +
+                    "only works on providers with CNAME flattening, such as Cloudflare");
+            else
                 result.AddError(
-                    $"{name}: CNAME cannot coexist with other record types " +
-                    $"({string.Join(", ", types.Where(t => t != "CNAME"))}) — RFC 1034 violation");
+                    $"{name}: CNAME cannot coexist with other record types ({others}) — RFC 1034 violation");
         }
 
         return result;

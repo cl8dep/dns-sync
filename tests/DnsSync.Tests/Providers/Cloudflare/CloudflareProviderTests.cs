@@ -200,6 +200,44 @@ public class CloudflareProviderTests
         await Should.ThrowAsync<InvalidOperationException>(() => Make(handler).PreflightAsync());
     }
 
+    [Fact]
+    public async Task PreflightAsync_AccountOwnedToken_VerifiesAgainstAccountEndpoint()
+    {
+        var handler = new FakeHttpHandler();
+        handler.Enqueue(HttpStatusCode.Unauthorized, """{"success":false,"errors":[{"code":1000,"message":"Invalid API Token"}]}""");
+        handler.Enqueue("""{"success":true,"result":{"status":"active"}}""");
+        handler.Enqueue("""{"success":true,"result":{"name":"Acme"}}""");
+        var provider = new CloudflareProvider(FakeToken, NullLogger<CloudflareProvider>.Instance, handler.CreateClient(), "acct-1");
+
+        await Should.NotThrowAsync(() => provider.PreflightAsync());
+
+        handler.Requests[0].RequestUri!.AbsolutePath.ShouldEndWith("/user/tokens/verify");
+        handler.Requests[1].RequestUri!.AbsolutePath.ShouldEndWith("/accounts/acct-1/tokens/verify");
+    }
+
+    [Fact]
+    public async Task PreflightAsync_AccountOwnedToken_InvalidForAccount_Throws()
+    {
+        var handler = new FakeHttpHandler();
+        handler.Enqueue(HttpStatusCode.Unauthorized, """{"success":false,"errors":[{"message":"Invalid API Token"}]}""");
+        handler.Enqueue(HttpStatusCode.Unauthorized, """{"success":false,"errors":[{"message":"Invalid API Token"}]}""");
+        var provider = new CloudflareProvider(FakeToken, NullLogger<CloudflareProvider>.Instance, handler.CreateClient(), "acct-1");
+
+        await Should.ThrowAsync<HttpRequestException>(() => provider.PreflightAsync());
+    }
+
+    [Fact]
+    public async Task PreflightAsync_Unauthorized_WithoutAccountId_HintsAtAccountId()
+    {
+        var handler = new FakeHttpHandler();
+        handler.Enqueue(HttpStatusCode.Unauthorized, """{"success":false,"errors":[{"message":"Invalid API Token"}]}""");
+
+        var ex = await Should.ThrowAsync<InvalidOperationException>(() => Make(handler).PreflightAsync());
+
+        ex.Message.ShouldContain("account_id");
+        handler.Requests.Count.ShouldBe(1);
+    }
+
     // ── Error handling ────────────────────────────────────────────────────────
 
     [Fact]

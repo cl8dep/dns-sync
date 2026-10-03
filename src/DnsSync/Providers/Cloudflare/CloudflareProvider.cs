@@ -44,7 +44,7 @@ public class CloudflareProvider : IProvider
 
     public async Task PreflightAsync(CancellationToken ct = default)
     {
-        var resp = await GetAsync("/user/tokens/verify", ct);
+        var resp = await VerifyTokenAsync(ct);
         var doc = JsonDocument.Parse(resp);
         if (!doc.RootElement.TryGetProperty("success", out var success) || !success.GetBoolean())
             throw new InvalidOperationException(
@@ -54,6 +54,23 @@ public class CloudflareProvider : IProvider
 
         if (_accountId is not null)
             await VerifyAccountAsync(ct);
+    }
+
+    private async Task<string> VerifyTokenAsync(CancellationToken ct)
+    {
+        try
+        {
+            return await GetAsync("/user/tokens/verify", ct);
+        }
+        // Account-owned tokens are rejected by the user endpoint and only verify under their account.
+        catch (HttpRequestException ex) when (ex.StatusCode == HttpStatusCode.Unauthorized)
+        {
+            if (_accountId is null)
+                throw new InvalidOperationException(
+                    $"{ex.Message}. If this is an account-owned API token, set 'account_id' on the provider.");
+
+            return await GetAsync($"/accounts/{Uri.EscapeDataString(_accountId)}/tokens/verify", ct);
+        }
     }
 
     private async Task VerifyAccountAsync(CancellationToken ct)

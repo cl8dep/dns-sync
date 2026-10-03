@@ -91,6 +91,20 @@ public class ZoneValidatorTests
     }
 
     [Fact]
+    public void Validate_ApexCnameWithOtherRecords_ReturnsWarning()
+    {
+        var zone = ZoneWith(
+            new CnameRecord { Name = "example.com.", Type = "CNAME", Ttl = 300, Target = "origin.example.net." },
+            new TxtRecord { Name = "example.com.", Type = "TXT", Ttl = 300, Values = ["v=spf1 ~all"] }
+        );
+
+        var result = ZoneValidator.Validate(zone);
+
+        result.IsValid.ShouldBeTrue();
+        result.Warnings.ShouldContain(w => w.Contains("apex CNAME") && w.Contains("flattening"));
+    }
+
+    [Fact]
     public void Validate_EmptyAddresses_ReturnsError()
     {
         var zone = ZoneWith(new ARecord
