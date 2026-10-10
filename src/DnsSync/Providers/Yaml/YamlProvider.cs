@@ -2,6 +2,7 @@ using DnsSync.Core;
 using DnsSync.Core.Records;
 using YamlDotNet.Core;
 using YamlDotNet.Core.Events;
+using YamlDotNet.RepresentationModel;
 using YamlDotNet.Serialization;
 using YamlDotNet.Serialization.NamingConventions;
 using static DnsSync.Core.DnsNameHelper;
@@ -47,7 +48,7 @@ public class YamlProvider(string directory) : IProvider
             throw new FileNotFoundException($"Zone file not found: {path}");
 
         var yaml = File.ReadAllText(path);
-        var records = ParseZoneYaml(yaml, normalized);
+        var records = ParseZoneYaml(yaml, normalized, path);
 
         return Task.FromResult(new DnsZone { Name = normalized, Records = records });
     }
@@ -64,7 +65,7 @@ public class YamlProvider(string directory) : IProvider
         return Task.FromResult<IReadOnlyList<string>>(zones);
     }
 
-    public static IReadOnlyList<DnsRecord> ParseZoneYaml(string yaml, string zoneName)
+    public static IReadOnlyList<DnsRecord> ParseZoneYaml(string yaml, string zoneName, string? path = null)
     {
         var deserializer = new DeserializerBuilder()
             .WithNamingConvention(UnderscoredNamingConvention.Instance)
@@ -74,6 +75,8 @@ public class YamlProvider(string directory) : IProvider
         var raw = deserializer.Deserialize<Dictionary<string, object>>(yaml)
                   ?? new Dictionary<string, object>();
 
+        var lines = path is null ? null : RecordLines(yaml);
+        var shownPath = path is null ? null : Path.GetRelativePath(Directory.GetCurrentDirectory(), path);
         var flat = new List<DnsRecord>();
 
         foreach (var (subdomain, value) in raw)
@@ -81,15 +84,45 @@ public class YamlProvider(string directory) : IProvider
             var fqdn = BuildFqdn(subdomain, zoneName);
             var recordDefs = NormalizeToList(value);
 
-            foreach (var def in recordDefs)
+            for (var i = 0; i < recordDefs.Count; i++)
             {
-                var record = ParseRecordDef(def, fqdn);
+                var source = lines is not null && lines.TryGetValue(subdomain, out var defLines) && i < defLines.Count
+                    ? $"{shownPath}:{defLines[i]}"
+                    : null;
+                var record = ParseRecordDef(recordDefs[i], fqdn, source);
                 if (record is not null)
                     flat.Add(record);
             }
         }
 
         return MergeIntoRRsets(flat);
+    }
+
+    /// <summary>
+    /// Line of each record definition, per subdomain key, in the same order NormalizeToList returns them.
+    /// The high-level deserializer drops positions, so the document is walked a second time for them.
+    /// </summary>
+    private static Dictionary<string, List<long>> RecordLines(string yaml)
+    {
+        var lines = new Dictionary<string, List<long>>();
+        var stream = new YamlStream();
+        stream.Load(new StringReader(yaml));
+        if (stream.Documents.Count == 0 || stream.Documents[0].RootNode is not YamlMappingNode root)
+            return lines;
+
+        foreach (var (key, value) in root.Children)
+        {
+            if (key is not YamlScalarNode { Value: { } name })
+                continue;
+
+            lines[name] = value switch
+            {
+                YamlSequenceNode list => list.Children.OfType<YamlMappingNode>().Select(n => n.Start.Line).ToList(),
+                YamlMappingNode def => [def.Start.Line],
+                _ => []
+            };
+        }
+        return lines;
     }
 
     internal static IReadOnlyList<DnsRecord> MergeIntoRRsets(List<DnsRecord> flat)
@@ -108,6 +141,7 @@ public class YamlProvider(string directory) : IProvider
                     Name = first.Name,
                     Type = first.Type,
                     Ttl = first.Ttl,
+                    Source = first.Source,
                     Proxied = first.Proxied,
                     Addresses = records.Cast<ARecord>().SelectMany(r => r.Addresses).ToList()
                 },
@@ -116,6 +150,7 @@ public class YamlProvider(string directory) : IProvider
                     Name = first.Name,
                     Type = first.Type,
                     Ttl = first.Ttl,
+                    Source = first.Source,
                     Proxied = first.Proxied,
                     Addresses = records.Cast<AaaaRecord>().SelectMany(r => r.Addresses).ToList()
                 },
@@ -124,6 +159,7 @@ public class YamlProvider(string directory) : IProvider
                     Name = first.Name,
                     Type = first.Type,
                     Ttl = first.Ttl,
+                    Source = first.Source,
                     Values = records.Cast<MxRecord>().SelectMany(r => r.Values).ToList()
                 },
                 TxtRecord => new TxtRecord
@@ -131,6 +167,7 @@ public class YamlProvider(string directory) : IProvider
                     Name = first.Name,
                     Type = first.Type,
                     Ttl = first.Ttl,
+                    Source = first.Source,
                     Values = records.Cast<TxtRecord>().SelectMany(r => r.Values).ToList()
                 },
                 NsRecord => new NsRecord
@@ -138,6 +175,7 @@ public class YamlProvider(string directory) : IProvider
                     Name = first.Name,
                     Type = first.Type,
                     Ttl = first.Ttl,
+                    Source = first.Source,
                     Nameservers = records.Cast<NsRecord>().SelectMany(r => r.Nameservers).ToList()
                 },
                 CaaRecord => new CaaRecord
@@ -145,6 +183,7 @@ public class YamlProvider(string directory) : IProvider
                     Name = first.Name,
                     Type = first.Type,
                     Ttl = first.Ttl,
+                    Source = first.Source,
                     Values = records.Cast<CaaRecord>().SelectMany(r => r.Values).ToList()
                 },
                 SrvRecord => new SrvRecord
@@ -152,6 +191,7 @@ public class YamlProvider(string directory) : IProvider
                     Name = first.Name,
                     Type = first.Type,
                     Ttl = first.Ttl,
+                    Source = first.Source,
                     Values = records.Cast<SrvRecord>().SelectMany(r => r.Values).ToList()
                 },
                 _ => first
@@ -193,7 +233,7 @@ public class YamlProvider(string directory) : IProvider
         return [];
     }
 
-    private static DnsRecord? ParseRecordDef(Dictionary<object, object> def, string fqdn)
+    private static DnsRecord? ParseRecordDef(Dictionary<object, object> def, string fqdn, string? source)
     {
         var type = GetString(def, "type")?.ToUpperInvariant();
         if (type is null) return null;
@@ -208,6 +248,7 @@ public class YamlProvider(string directory) : IProvider
                 Name = fqdn,
                 Type = "A",
                 Ttl = ttl,
+                Source = source,
                 Proxied = proxied,
                 Addresses = GetStringList(def, "values", "value")
             },
@@ -216,6 +257,7 @@ public class YamlProvider(string directory) : IProvider
                 Name = fqdn,
                 Type = "AAAA",
                 Ttl = ttl,
+                Source = source,
                 Proxied = proxied,
                 Addresses = GetStringList(def, "values", "value")
             },
@@ -224,6 +266,7 @@ public class YamlProvider(string directory) : IProvider
                 Name = fqdn,
                 Type = "CNAME",
                 Ttl = ttl,
+                Source = source,
                 Proxied = proxied,
                 Target = NormalizeFqdn(GetString(def, "value") ?? GetString(def, "target") ?? "")
             },
@@ -232,6 +275,7 @@ public class YamlProvider(string directory) : IProvider
                 Name = fqdn,
                 Type = "MX",
                 Ttl = ttl,
+                Source = source,
                 Proxied = proxied,
                 Values = GetMxValues(def)
             },
@@ -240,6 +284,7 @@ public class YamlProvider(string directory) : IProvider
                 Name = fqdn,
                 Type = "TXT",
                 Ttl = ttl,
+                Source = source,
                 Proxied = proxied,
                 Values = GetStringList(def, "values", "value").Select(UnescapeTxt).ToList()
             },
@@ -248,6 +293,7 @@ public class YamlProvider(string directory) : IProvider
                 Name = fqdn,
                 Type = "NS",
                 Ttl = ttl,
+                Source = source,
                 Proxied = proxied,
                 Nameservers = GetStringList(def, "values", "value").Select(NormalizeFqdn).ToList()
             },
@@ -256,6 +302,7 @@ public class YamlProvider(string directory) : IProvider
                 Name = fqdn,
                 Type = "CAA",
                 Ttl = ttl,
+                Source = source,
                 Proxied = proxied,
                 Values = GetCaaValues(def)
             },
@@ -264,6 +311,7 @@ public class YamlProvider(string directory) : IProvider
                 Name = fqdn,
                 Type = "SRV",
                 Ttl = ttl,
+                Source = source,
                 Proxied = proxied,
                 Values = GetSrvValues(def)
             },
