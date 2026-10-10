@@ -73,6 +73,13 @@ curl -fsSL https://github.com/cl8dep/dns-sync/releases/latest/download/dns-sync-
 
 Homebrew: `brew install cl8dep/tap/dns-sync`
 
+Shell completion (add to `~/.bashrc` or `~/.zshrc` to persist):
+
+```bash
+source <(dns-sync completions bash)   # bash
+source <(dns-sync completions zsh)    # zsh
+```
+
 ---
 
 ## Documentation
