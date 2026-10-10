@@ -31,9 +31,12 @@ jobs:
             -p:PublishSingleFile=true -p:Version="${VERSION_NUM}" -o out/osx-x64
           dotnet publish src/DnsSync -c Release -r linux-x64 --self-contained \
             -p:PublishSingleFile=true -p:Version="${VERSION_NUM}" -o out/linux-x64
+          dotnet publish src/DnsSync -c Release -r linux-arm64 --self-contained \
+            -p:PublishSingleFile=true -p:Version="${VERSION_NUM}" -o out/linux-arm64
           cp out/osx-arm64/dns-sync out/dns-sync-darwin-arm64
           cp out/osx-x64/dns-sync  out/dns-sync-darwin-x64
           cp out/linux-x64/dns-sync out/dns-sync-linux-x64
+          cp out/linux-arm64/dns-sync out/dns-sync-linux-arm64
 
       - name: Upload release binaries
         env:
@@ -43,6 +46,7 @@ jobs:
             out/dns-sync-darwin-arm64 \
             out/dns-sync-darwin-x64 \
             out/dns-sync-linux-x64 \
+            out/dns-sync-linux-arm64 \
             --clobber
 
       - name: Update floating tags
