@@ -24,6 +24,25 @@ It works like Terraform for DNS: `plan` shows what would change, `apply` makes i
 
 ---
 
+## Why not Terraform?
+
+Why are you using Terraform for DNS? Don't you love yourself?
+
+| | dns-sync | Terraform |
+|---|---|---|
+| **State file** | None. Your DNS provider *is* the state. | A `.tfstate` you must store, lock, back up and pray over. |
+| **Adding a record** | One line of YAML. | A `resource` block, a unique name, and a quiet moment of reflection. |
+| **Same records on 3 providers** | Add 3 targets. Done. | Write it 3 times. Or write a module. Then maintain the module. |
+| **Switching providers** | Change one line in `config.yaml`. | Rewrite the resources, `terraform state mv`, cancel your weekend. |
+| **Adopting an existing zone** | `dns-sync import` | `terraform import`, one record at a time, until the heat death of the universe. |
+| **Someone clicked around in the dashboard** | `dns-sync drift` tells you. | `plan` tells you, if the state file agrees. It rarely agrees. |
+| **Install** | One binary. | The CLI, the providers, a backend, and a lock table. |
+| **Your therapist's opinion** | Proud of you. | Concerned. |
+
+Already managing everything else in Terraform with a single DNS provider? Fine, stay there. We won't judge. Much.
+
+---
+
 ## Features
 
 | Feature | Description |
