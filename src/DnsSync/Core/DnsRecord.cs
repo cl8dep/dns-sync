@@ -9,6 +9,9 @@ public abstract class DnsRecord
     public required string Type { get; init; }   // e.g. "A", "MX", "CNAME"
     public required int Ttl { get; init; }
 
+    /// <summary>Where the record was defined, as "path:line". Only set for records read from zone files.</summary>
+    public string? Source { get; init; }
+
     /// <summary>
     /// Cloudflare proxy status. Null means unmanaged: the flag is neither compared nor written.
     /// Only A, AAAA and CNAME records can be proxied; providers other than Cloudflare ignore it.

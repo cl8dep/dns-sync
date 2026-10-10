@@ -465,4 +465,22 @@ public class ZoneValidatorTests
 
         result.IsValid.ShouldBeTrue();
     }
+
+    [Fact]
+    public void Validate_RecordWithSource_ErrorShowsFileAndLine()
+    {
+        var zone = ZoneWith(new MxRecord
+        {
+            Name = "example.com.",
+            Type = "MX",
+            Ttl = 300,
+            Source = "zones/example.com.yaml:14",
+            Values = [new MxValue(10, "")]
+        });
+
+        var result = ZoneValidator.Validate(zone);
+
+        result.Errors.ShouldHaveSingleItem().ShouldBe(
+            "example.com. MX (priority 10): exchange value is empty\n    → zones/example.com.yaml:14");
+    }
 }

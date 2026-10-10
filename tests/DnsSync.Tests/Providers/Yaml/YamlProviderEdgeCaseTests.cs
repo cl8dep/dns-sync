@@ -275,4 +275,28 @@ public class YamlProviderEdgeCaseTests : IDisposable
         records.Count.ShouldBe(1);
         records.OfType<ARecord>().ShouldHaveSingleItem();
     }
+
+    [Fact]
+    public async Task GetZoneAsync_SetsSourceToFileAndLineOfEachRecord()
+    {
+        var path = Write("example.com.yaml", """
+            # comment
+            www:
+              type: A
+              value: 1.2.3.4
+            '':
+              - type: MX
+                values:
+                  - {preference: 10, exchange: mail.example.com.}
+              - type: TXT
+                value: hello
+            """);
+
+        var zone = await new YamlProvider(_dir).GetZoneAsync("example.com.");
+        path = Path.GetRelativePath(Directory.GetCurrentDirectory(), path);
+
+        zone.Records.OfType<ARecord>().Single().Source.ShouldBe($"{path}:3");
+        zone.Records.OfType<MxRecord>().Single().Source.ShouldBe($"{path}:6");
+        zone.Records.OfType<TxtRecord>().Single().Source.ShouldBe($"{path}:9");
+    }
 }

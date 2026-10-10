@@ -27,6 +27,10 @@ public static class ZoneValidator
 
         foreach (var record in zone.Records)
         {
+            var at = record.Source is null ? "" : $"\n    → {record.Source}";
+            void Error(string message) => result.AddError(message + at);
+            void Warning(string message) => result.AddWarning(message + at);
+
             // Track (name → set of types) for CNAME conflict detection
             if (!namesSeen.TryGetValue(record.Name, out var types))
             {
@@ -36,98 +40,98 @@ public static class ZoneValidator
 
             // Validate record type
             if (!KnownTypes.Contains(record.Type))
-                result.AddWarning($"{record.Name} {record.Type}: unknown record type, will be skipped");
+                Warning($"{record.Name} {record.Type}: unknown record type, will be skipped");
             else if (!SupportedTypes.Contains(record.Type))
-                result.AddWarning($"{record.Name} {record.Type}: record type not supported, will be skipped");
+                Warning($"{record.Name} {record.Type}: record type not supported, will be skipped");
 
             // Validate TTL
             if (record.Ttl < 0)
-                result.AddError($"{record.Name} {record.Type}: TTL must be >= 0 (got {record.Ttl})");
+                Error($"{record.Name} {record.Type}: TTL must be >= 0 (got {record.Ttl})");
             else if (record.Ttl > 2_147_483_647)
-                result.AddError($"{record.Name} {record.Type}: TTL exceeds max value");
+                Error($"{record.Name} {record.Type}: TTL exceeds max value");
             else if (record.Ttl < 60)
-                result.AddWarning($"{record.Name} {record.Type}: very low TTL ({record.Ttl}s) may cause excessive DNS traffic");
+                Warning($"{record.Name} {record.Type}: very low TTL ({record.Ttl}s) may cause excessive DNS traffic");
 
             if (record.Proxied is not null && !ProxiableTypes.Contains(record.Type))
-                result.AddError($"{record.Name} {record.Type}: 'proxied' is only valid on A, AAAA and CNAME records");
+                Error($"{record.Name} {record.Type}: 'proxied' is only valid on A, AAAA and CNAME records");
 
             // Validate FQDN format
             if (!record.Name.EndsWith('.'))
-                result.AddError($"Record name '{record.Name}' is not a valid FQDN (missing trailing dot)");
+                Error($"Record name '{record.Name}' is not a valid FQDN (missing trailing dot)");
 
             // Type-specific validation
             switch (record)
             {
                 case CnameRecord cname:
                     if (string.IsNullOrWhiteSpace(cname.Target) || cname.Target == ".")
-                        result.AddError($"{record.Name} CNAME: target value is empty");
+                        Error($"{record.Name} CNAME: target value is empty");
                     else if (!IsValidHostname(cname.Target))
-                        result.AddError($"{record.Name} CNAME: '{cname.Target}' is not a valid hostname");
+                        Error($"{record.Name} CNAME: '{cname.Target}' is not a valid hostname");
                     types.Add("CNAME");
                     break;
 
                 case ARecord a:
                     if (a.Addresses.Count == 0)
-                        result.AddError($"{record.Name} A: no addresses defined");
+                        Error($"{record.Name} A: no addresses defined");
                     foreach (var addr in a.Addresses)
                     {
                         if (!IPAddress.TryParse(addr, out var ip) || ip.AddressFamily != AddressFamily.InterNetwork)
-                            result.AddError($"{record.Name} A: '{addr}' is not a valid IPv4 address");
+                            Error($"{record.Name} A: '{addr}' is not a valid IPv4 address");
                     }
                     types.Add("A");
                     break;
 
                 case AaaaRecord aaaa:
                     if (aaaa.Addresses.Count == 0)
-                        result.AddError($"{record.Name} AAAA: no addresses defined");
+                        Error($"{record.Name} AAAA: no addresses defined");
                     foreach (var addr in aaaa.Addresses)
                     {
                         if (!IPAddress.TryParse(addr, out var ip) || ip.AddressFamily != AddressFamily.InterNetworkV6)
-                            result.AddError($"{record.Name} AAAA: '{addr}' is not a valid IPv6 address");
+                            Error($"{record.Name} AAAA: '{addr}' is not a valid IPv6 address");
                     }
                     types.Add("AAAA");
                     break;
 
                 case MxRecord mx:
                     if (mx.Values.Count == 0)
-                        result.AddError($"{record.Name} MX: no values defined");
+                        Error($"{record.Name} MX: no values defined");
                     foreach (var v in mx.Values)
                     {
                         if (string.IsNullOrWhiteSpace(v.Exchange) || v.Exchange == ".")
-                            result.AddError($"{record.Name} MX (priority {v.Preference}): exchange value is empty");
+                            Error($"{record.Name} MX (priority {v.Preference}): exchange value is empty");
                         else if (!IsValidHostname(v.Exchange))
-                            result.AddError($"{record.Name} MX (priority {v.Preference}): '{v.Exchange}' is not a valid hostname");
+                            Error($"{record.Name} MX (priority {v.Preference}): '{v.Exchange}' is not a valid hostname");
                         if (v.Preference is < 0 or > 65535)
-                            result.AddError($"{record.Name} MX: priority {v.Preference} is out of range (0–65535)");
+                            Error($"{record.Name} MX: priority {v.Preference} is out of range (0–65535)");
                     }
                     types.Add("MX");
                     break;
 
                 case TxtRecord txt:
                     if (txt.Values.Count == 0)
-                        result.AddError($"{record.Name} TXT: no values defined");
+                        Error($"{record.Name} TXT: no values defined");
                     types.Add("TXT");
                     break;
 
                 case NsRecord ns:
                     if (ns.Nameservers.Count == 0)
-                        result.AddError($"{record.Name} NS: no nameservers defined");
+                        Error($"{record.Name} NS: no nameservers defined");
                     types.Add("NS");
                     break;
 
                 case CaaRecord caa:
                     if (caa.Values.Count == 0)
-                        result.AddError($"{record.Name} CAA: no values defined");
+                        Error($"{record.Name} CAA: no values defined");
                     types.Add("CAA");
                     break;
 
                 case SrvRecord srv:
                     if (srv.Values.Count == 0)
-                        result.AddError($"{record.Name} SRV: no values defined");
+                        Error($"{record.Name} SRV: no values defined");
                     foreach (var v in srv.Values)
                     {
                         if (v.Port is < 0 or > 65535)
-                            result.AddError($"{record.Name} SRV: port {v.Port} is out of range (0–65535)");
+                            Error($"{record.Name} SRV: port {v.Port} is out of range (0–65535)");
                     }
                     types.Add("SRV");
                     break;
