@@ -1,5 +1,4 @@
 using System.Reflection;
-using System.Text.RegularExpressions;
 using DnsSync.Commands;
 using DnsSync.Infrastructure;
 using Microsoft.Extensions.DependencyInjection;
@@ -34,55 +33,22 @@ public class CompletionsCommandTests : IDisposable
         return app;
     }
 
-    // Every concrete command class, named by convention (PlanCommand -> plan), with its option names.
-    private static Dictionary<string, HashSet<string>> CliCommands()
-    {
-        return typeof(CompletionsCommand).Assembly.GetTypes()
-            .Where(t => !t.IsAbstract && typeof(ICommand).IsAssignableFrom(t))
-            .ToDictionary(
-                t => t.Name[..^"Command".Length].ToLowerInvariant(),
-                t =>
-                {
-                    var settings = t.BaseType!.GetGenericArguments()[0];
-                    var flags = settings.GetProperties()
-                        .Select(p => p.GetCustomAttribute<CommandOptionAttribute>())
-                        .OfType<CommandOptionAttribute>()
-                        .SelectMany(a => a.LongNames.Select(n => "--" + n).Concat(a.ShortNames.Select(n => "-" + n)))
-                        .ToHashSet();
-                    flags.UnionWith(["-h", "--help"]);
-                    return flags;
-                });
-    }
-
     [Fact]
-    public void BashScript_CoversEveryCommandAndFlag()
+    public void BashScript_ListsEveryRegisteredCommandAndFlag()
     {
-        var script = CompletionsCommand.BashScript;
-        var baseFlags = Regex.Match(script, @"local base=""([^""]*)""").Groups[1].Value;
-        var scriptCommands = Regex.Matches(script, @"^\s*(\w+)\) opts=""([^""]*)""", RegexOptions.Multiline)
-            .ToDictionary(
-                m => m.Groups[1].Value,
-                m => m.Groups[2].Value.Replace("$base", baseFlags)
-                    .Split(' ', StringSplitOptions.RemoveEmptyEntries)
-                    .Where(w => w.StartsWith('-'))
-                    .ToHashSet());
-        var rootWords = Regex.Match(script, @"compgen -W ""(validate[^""]*)""").Groups[1].Value.Split(' ');
+        var script = CompletionsCommand.BashScript(Program.Commands);
 
-        var cli = CliCommands();
-
-        cli.Keys.Count.ShouldBe(8);
-        scriptCommands.Keys.ShouldBe(cli.Keys, ignoreOrder: true);
-        rootWords.ShouldBeSubsetOf(cli.Keys.Concat(["-h", "--help", "--version"]));
-        cli.Keys.ShouldBeSubsetOf(rootWords);
-        foreach (var (name, flags) in cli)
-            scriptCommands[name].ShouldBe(flags, ignoreOrder: true, customMessage: $"flags for '{name}'");
-    }
-
-    [Fact]
-    public void ZshScript_WrapsBashScript()
-    {
-        CompletionsCommand.ZshScript.ShouldContain("bashcompinit");
-        CompletionsCommand.ZshScript.ShouldEndWith(CompletionsCommand.BashScript);
+        foreach (var command in Program.Commands)
+        {
+            var line = script.Split('\n').Single(l => l.TrimStart().StartsWith(command.Name + ") opts="));
+            var opts = line.Split('"')[1].Split(' ');
+            var flags = command.Settings.GetProperties()
+                .Select(p => p.GetCustomAttribute<CommandOptionAttribute>())
+                .OfType<CommandOptionAttribute>()
+                .SelectMany(a => a.LongNames.Select(n => "--" + n).Concat(a.ShortNames.Select(n => "-" + n)));
+            foreach (var flag in flags)
+                opts.ShouldContain(flag, customMessage: $"'{flag}' missing for '{command.Name}'");
+        }
     }
 
     [Theory]

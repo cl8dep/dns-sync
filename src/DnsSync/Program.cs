@@ -133,41 +133,50 @@ app.Configure(config =>
         },
     };
 
-    config.AddCommand<ValidateCommand>("validate")
-        .WithDescription("Validate config and zone files without making network calls")
-        .WithExample(["validate", "--config", "config.yaml"]);
-
-    config.AddCommand<PlanCommand>("plan")
-        .WithDescription("Show what changes would be applied (no-op)")
-        .WithExample(["plan", "--config", "config.yaml"]);
-
-    config.AddCommand<ApplyCommand>("apply")
-        .WithDescription("Apply changes from source to all target providers")
-        .WithExample(["apply", "--config", "config.yaml", "--yes"]);
-
-    config.AddCommand<ImportCommand>("import")
-        .WithDescription("Import current DNS state from a provider into YAML zone files")
-        .WithExample(["import", "--config", "config.yaml", "--provider", "cloudflare", "--all"]);
-
-    config.AddCommand<DiffCommand>("diff")
-        .WithDescription("Compare DNS state between two providers directly (read-only)")
-        .WithExample(["diff", "--from", "cloudflare", "--to", "route53", "--config", "config.yaml"])
-        .WithExample(["diff", "--from", "cloudflare", "--to", "porkbun", "--zone", "example.com.", "--config", "config.yaml"]);
-
-    config.AddCommand<FmtCommand>("fmt")
-        .WithDescription("Reformat zone YAML files to canonical sorted style")
-        .WithExample(["fmt"])
-        .WithExample(["fmt", "./zones", "--check"]);
-
-    config.AddCommand<DriftCommand>("drift")
-        .WithDescription("Detect DNS record drift from desired state without applying changes")
-        .WithExample(["drift", "--config", "config.yaml"])
-        .WithExample(["drift", "--config", "config.yaml", "--output", "json"]);
-
-    config.AddCommand<CompletionsCommand>("completions")
-        .WithDescription("Print a shell completion script (bash or zsh)")
-        .WithExample(["completions", "bash"])
-        .WithExample(["completions", "zsh"]);
+    foreach (var command in Program.Commands)
+        command.Register(config);
 });
 
 return await app.RunAsync(args);
+
+partial class Program
+{
+    internal static readonly CliCommand[] Commands =
+    [
+        CliCommand.Create<ValidateCommand, BaseSettings>("validate", c => c
+            .WithDescription("Validate config and zone files without making network calls")
+            .WithExample(["validate", "--config", "config.yaml"])),
+
+        CliCommand.Create<PlanCommand, PlanSettings>("plan", c => c
+            .WithDescription("Show what changes would be applied (no-op)")
+            .WithExample(["plan", "--config", "config.yaml"])),
+
+        CliCommand.Create<ApplyCommand, ApplySettings>("apply", c => c
+            .WithDescription("Apply changes from source to all target providers")
+            .WithExample(["apply", "--config", "config.yaml", "--yes"])),
+
+        CliCommand.Create<ImportCommand, ImportSettings>("import", c => c
+            .WithDescription("Import current DNS state from a provider into YAML zone files")
+            .WithExample(["import", "--config", "config.yaml", "--provider", "cloudflare", "--all"])),
+
+        CliCommand.Create<DiffCommand, DiffSettings>("diff", c => c
+            .WithDescription("Compare DNS state between two providers directly (read-only)")
+            .WithExample(["diff", "--from", "cloudflare", "--to", "route53", "--config", "config.yaml"])
+            .WithExample(["diff", "--from", "cloudflare", "--to", "porkbun", "--zone", "example.com.", "--config", "config.yaml"])),
+
+        CliCommand.Create<FmtCommand, FmtSettings>("fmt", c => c
+            .WithDescription("Reformat zone YAML files to canonical sorted style")
+            .WithExample(["fmt"])
+            .WithExample(["fmt", "./zones", "--check"])),
+
+        CliCommand.Create<DriftCommand, DriftSettings>("drift", c => c
+            .WithDescription("Detect DNS record drift from desired state without applying changes")
+            .WithExample(["drift", "--config", "config.yaml"])
+            .WithExample(["drift", "--config", "config.yaml", "--output", "json"])),
+
+        CliCommand.Create<CompletionsCommand, CompletionsSettings>("completions", c => c
+            .WithDescription("Print a shell completion script (bash or zsh)")
+            .WithExample(["completions", "bash"])
+            .WithExample(["completions", "zsh"])),
+    ];
+}
