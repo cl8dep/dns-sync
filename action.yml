@@ -37,8 +37,10 @@ runs:
         else
           URL="https://github.com/cl8dep/dns-sync/releases/download/${{ inputs.version }}/${ARTIFACT}"
         fi
-        curl -fsSL "$URL" -o /usr/local/bin/dns-sync
-        chmod +x /usr/local/bin/dns-sync
+        mkdir -p "$RUNNER_TEMP/bin"
+        curl -fsSL "$URL" -o "$RUNNER_TEMP/bin/dns-sync"
+        chmod +x "$RUNNER_TEMP/bin/dns-sync"
+        echo "$RUNNER_TEMP/bin" >> "$GITHUB_PATH"
 
     - name: Run plan
       id: run
