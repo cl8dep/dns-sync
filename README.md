@@ -41,6 +41,8 @@ Why are you using Terraform for DNS? Don't you love yourself?
 
 Already managing everything else in Terraform with a single DNS provider? Fine, stay there. We won't judge. Much.
 
+Thanks to [@cuza](https://github.com/cuza) for asking the question that started this section.
+
 ---
 
 ## Features
