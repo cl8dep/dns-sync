@@ -62,16 +62,15 @@ For the full list including planned and unsupported types, see [Record Types](ht
 ## Install
 
 ```bash
-# macOS (Apple Silicon)
-curl -fsSL https://github.com/cl8dep/dns-sync/releases/latest/download/dns-sync-darwin-arm64 \
-  -o /usr/local/bin/dns-sync && chmod +x /usr/local/bin/dns-sync
+# Detects OS and CPU (Linux x64/arm64, macOS x64/arm64)
+curl -fsSL https://raw.githubusercontent.com/cl8dep/dns-sync/main/install.sh | sh
 
-# Linux (use dns-sync-linux-arm64 on ARM64)
-curl -fsSL https://github.com/cl8dep/dns-sync/releases/latest/download/dns-sync-linux-x64 \
-  -o /usr/local/bin/dns-sync && chmod +x /usr/local/bin/dns-sync
+# Pin a version or choose the directory (default: ~/.local/bin)
+curl -fsSL https://raw.githubusercontent.com/cl8dep/dns-sync/main/install.sh \
+  | DNS_SYNC_INSTALL_DIR=/usr/local/bin sh -s v0.12.0
 ```
 
-Other platforms (macOS Intel) are on the [releases page](https://github.com/cl8dep/dns-sync/releases).
+Binaries for each platform are also on the [releases page](https://github.com/cl8dep/dns-sync/releases).
 
 Shell completion (add to `~/.bashrc` or `~/.zshrc` to persist):
 
