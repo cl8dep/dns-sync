@@ -66,12 +66,12 @@ For the full list including planned and unsupported types, see [Record Types](ht
 curl -fsSL https://github.com/cl8dep/dns-sync/releases/latest/download/dns-sync-darwin-arm64 \
   -o /usr/local/bin/dns-sync && chmod +x /usr/local/bin/dns-sync
 
-# Linux
+# Linux (use dns-sync-linux-arm64 on ARM64)
 curl -fsSL https://github.com/cl8dep/dns-sync/releases/latest/download/dns-sync-linux-x64 \
   -o /usr/local/bin/dns-sync && chmod +x /usr/local/bin/dns-sync
 ```
 
-Homebrew: `brew install cl8dep/tap/dns-sync`
+Other platforms (macOS Intel) are on the [releases page](https://github.com/cl8dep/dns-sync/releases).
 
 Shell completion (add to `~/.bashrc` or `~/.zshrc` to persist):
 
