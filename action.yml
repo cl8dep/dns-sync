@@ -27,7 +27,7 @@ runs:
       shell: bash
       run: |
         case "$RUNNER_OS" in
-          Linux)  ARTIFACT="dns-sync-linux-x64" ;;
+          Linux)  ARTIFACT="dns-sync-linux-$(uname -m | sed 's/x86_64/x64/;s/aarch64/arm64/')" ;;
           macOS)  ARTIFACT="dns-sync-darwin-$(uname -m | sed 's/x86_64/x64/;s/arm64/arm64/')" ;;
           *)      echo "Unsupported runner OS: $RUNNER_OS" && exit 1 ;;
         esac
