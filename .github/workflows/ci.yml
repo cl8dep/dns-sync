@@ -48,3 +48,15 @@ jobs:
 
       - name: Validate zone JSON Schema
         run: npx --yes ajv-cli@5 compile -s schemas/zone.schema.json
+
+  install-script:
+    name: Install script
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install the latest release for this runner
+        run: |
+          DNS_SYNC_INSTALL_DIR="$RUNNER_TEMP/bin" sh install.sh
+          "$RUNNER_TEMP/bin/dns-sync" --version
