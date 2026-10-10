@@ -163,6 +163,11 @@ app.Configure(config =>
         .WithDescription("Detect DNS record drift from desired state without applying changes")
         .WithExample(["drift", "--config", "config.yaml"])
         .WithExample(["drift", "--config", "config.yaml", "--output", "json"]);
+
+    config.AddCommand<CompletionsCommand>("completions")
+        .WithDescription("Print a shell completion script (bash or zsh)")
+        .WithExample(["completions", "bash"])
+        .WithExample(["completions", "zsh"]);
 });
 
 return await app.RunAsync(args);
